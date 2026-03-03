@@ -130,7 +130,8 @@
   .modal-period button:hover { border-color:var(--accent); color:var(--accent); }
   .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
-  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
+  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent); }
+  .card.selected::after { content:'✕ clique para limpar'; position:absolute; bottom:8px; right:10px; font-size:9px; color:var(--accent); opacity:.7; }
 </style>
 </head>
 <body>
@@ -173,7 +174,8 @@
   <!-- CARDS STATUS -->
   <section>
     <div class="section-title">Status Atual por Banco</div>
-    <div class="cards-grid" id="cardsContainer">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;margin-top:-8px">💡 Clique em um card para filtrar todos os dados do cliente</div>
+  <div class="cards-grid" id="cardsContainer">
       <div class="loader"><div class="spin"></div> Carregando...</div>
     </div>
   </section>
@@ -390,7 +392,7 @@ function renderCards(rows) {
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
     return `
-      <div class="card ${cls}" onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
+      <div class="card ${cls}${document.getElementById('fCliente').value===r.clienteNome?' selected':''}" onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
         <div class="card-header">
           <div class="card-banco">${r.bancoNome??'—'}</div>
           ${fmt.badge(r.tipoBackup)}
@@ -498,13 +500,18 @@ function renderHistorico(rows) {
 
 // ── Modal detalhe cliente ─────────────────────────────────────
 function abrirCliente(nome, doc) {
-  clienteAtual = { nome, doc };
-  document.getElementById('modalTitulo').textContent = nome || 'Cliente';
-  document.getElementById('modalChips').innerHTML =
-    `<div class="chip">👤 <b>${nome||'—'}</b></div>
-     <div class="chip">📄 <b>${doc||'—'}</b></div>`;
-  setModalPeriodo('semana');
-  document.getElementById('overlay').classList.add('open');
+  // Se clicar no mesmo card já selecionado, limpa o filtro
+  const fCliente = document.getElementById('fCliente');
+  if (fCliente.value === nome) {
+    limparFiltros();
+    return;
+  }
+  // Preenche o campo cliente com o nome e aplica filtro
+  fCliente.value = nome || doc || '';
+  limparPeriodoBtns();
+  aplicarFiltroCliente();
+  // Scroll suave até o histórico
+  document.querySelector('section:last-child').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function fecharModal() { document.getElementById('overlay').classList.remove('open'); clienteAtual=null; }
