@@ -237,7 +237,7 @@
           <option value="Erro">🚨 Erro</option>
           <option value="Alerta">⚠️ Alerta</option>
         </select>
-        <select id="filtroBanco" onchange="carregarHistorico()">
+        <select id="filtroBanco" onchange="if(!cardSelecionado) carregarHistorico()">
           <option value="">Todos os bancos</option>
         </select>
         <select id="filtroLimit" onchange="carregarHistorico()">
@@ -341,11 +341,13 @@ function onCardClick(el) {
   document.getElementById('filterBanner').classList.add('visible');
   document.getElementById('chartContainer').classList.add('hl');
   document.getElementById('tableContainer').classList.add('hl');
+  // Gráfico: seleciona banco no select SEM disparar onchange (evita recarregar histórico)
   const sg = document.getElementById('selectBancoGrafico');
   for (let i = 0; i < sg.options.length; i++) {
     if (sg.options[i].value === bancoNome) { sg.selectedIndex = i; break; }
   }
   carregarGrafico();
+  // Filtra histórico apenas pelos dados já em memória (todosHistorico), sem novo fetch
   aplicarFiltroCliente();
   setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 60);
 }
@@ -357,8 +359,9 @@ function desselecionarCard() {
   document.getElementById('chartContainer').classList.remove('hl');
   document.getElementById('tableContainer').classList.remove('hl');
   document.getElementById('selectBancoGrafico').selectedIndex = 0;
+  document.getElementById('filtroBanco').selectedIndex = 0;
   carregarGrafico();
-  aplicarFiltroCliente();
+  carregarHistorico();
 }
 
 // Filtros globais
@@ -531,8 +534,10 @@ async function carregarGrafico() {
 
 async function carregarHistorico() {
   const tipo  = document.getElementById('filtroTipo').value;
-  const banco = document.getElementById('filtroBanco').value;
   const limit = document.getElementById('filtroLimit').value;
+  // Quando há card selecionado, NÃO filtra por banco na API —
+  // a filtragem por clienteCNPJ é feita em memória por aplicarFiltroCliente()
+  const banco = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
   document.getElementById('tabelaHistorico').innerHTML=
     `<tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
