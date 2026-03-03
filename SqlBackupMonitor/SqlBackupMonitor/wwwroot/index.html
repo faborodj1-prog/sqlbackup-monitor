@@ -1,323 +1,437 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>SqlBackup Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg:      #0a0c10;
-    --surface: #111318;
-    --border:  #1e2128;
-    --border2: #2a2f3a;
-    --text:    #e2e6f0;
-    --muted:   #6b7280;
-    --ok:      #22c55e;
-    --erro:    #ef4444;
-    --alerta:  #f59e0b;
-    --accent:  #3b82f6;
-    --accent2: #6366f1;
-    --mono:    'JetBrains Mono', monospace;
-    --ui:      'Syne', sans-serif;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
-  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#222;font-size:14px}
+header{background:#1a2235;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px #0004}
+header h1{font-size:18px;font-weight:600;letter-spacing:.3px}
+header span{font-size:12px;opacity:.6;margin-left:auto}
+button{cursor:pointer;border:none;border-radius:6px;font-size:13px;font-family:inherit;padding:6px 14px;transition:opacity .15s}
+button:hover{opacity:.85}
 
-  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; }
-  .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
-  .logo-dot { width:8px; height:8px; background:var(--ok); border-radius:50%; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
-  .header-right { display:flex; align-items:center; gap:16px; }
-  .last-update { color:var(--muted); font-size:11px; }
-  .btn-refresh { background:var(--surface); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer; border-radius:4px; transition:border-color .2s; }
-  .btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
+/* ── Filtros ── */
+.filters{background:#fff;border-bottom:1px solid #e0e4ea;padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.fgroup{display:flex;flex-direction:column;gap:4px}
+.fgroup label{font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.fgroup input,.fgroup select{height:34px;border:1px solid #d0d5dd;border-radius:6px;padding:0 10px;font-size:13px;font-family:inherit;outline:none;background:#fafafa}
+.fgroup input:focus,.fgroup select:focus{border-color:#4a7eff;background:#fff}
+.period-btns{display:flex;gap:6px;align-items:flex-end}
+.period-btns button{height:34px;background:#eef2ff;color:#3b5bdb;font-weight:600;border:1px solid #c5d0f7}
+.period-btns button.active{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.btn-filter{height:34px;background:#3b5bdb;color:#fff;font-weight:600;padding:0 18px}
+.btn-clear{height:34px;background:#f3f4f6;color:#555;border:1px solid #d0d5dd}
 
-  main { max-width:1400px; margin:0 auto; padding:28px 32px; display:flex; flex-direction:column; gap:28px; }
+/* ── Cards de status ── */
+.cards{display:flex;flex-wrap:wrap;gap:14px;padding:18px 24px 0}
+.card{background:#fff;border-radius:10px;padding:14px 18px;min-width:200px;flex:1;box-shadow:0 1px 4px #0001;border-left:4px solid #ccc;cursor:pointer;transition:box-shadow .15s}
+.card:hover{box-shadow:0 3px 12px #0002}
+.card.ok{border-color:#2da44e}
+.card.erro{border-color:#cf222e}
+.card.alerta{border-color:#d4a017}
+.card.rodando{border-color:#0969da}
+.card-title{font-size:12px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.card-name{font-size:15px;font-weight:700;margin-bottom:2px}
+.card-sub{font-size:12px;color:#888}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.ok{background:#dafbe1;color:#1a7f37}
+.badge.erro{background:#ffebe9;color:#cf222e}
+.badge.alerta{background:#fff8c5;color:#9a6700}
+.badge.rodando{background:#ddf4ff;color:#0550ae}
 
-  .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+/* ── Tabela ── */
+.section{padding:18px 24px}
+.section-title{font-size:14px;font-weight:700;color:#444;margin-bottom:10px}
+.table-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 4px #0001;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:#f6f8fa;border-bottom:2px solid #e0e4ea}
+th{padding:10px 12px;text-align:left;font-weight:600;color:#555;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f0f2f5;transition:background .1s}
+tbody tr:hover{background:#f6f8ff;cursor:pointer}
+td{padding:9px 12px;vertical-align:middle}
+.no-data{text-align:center;padding:32px;color:#aaa;font-style:italic}
 
-  .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s; }
-  .card:hover { border-color:var(--border2); transform:translateY(-1px); }
-  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-  .card.ok::before     { background:var(--ok); }
-  .card.erro::before   { background:var(--erro); }
-  .card.alerta::before { background:var(--alerta); }
+/* ── Paginação ── */
+.pagination{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 24px}
+.pagination button{height:30px;min-width:30px;background:#fff;border:1px solid #d0d5dd;color:#444;border-radius:6px;font-size:12px}
+.pagination button.active{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.pagination span{font-size:12px;color:#666}
 
-  .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-  .card-banco { font-family:var(--ui); font-size:15px; font-weight:800; }
-  .badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; letter-spacing:.5px; }
-  .badge.ok     { background:rgba(34,197,94,.15);  color:var(--ok); }
-  .badge.erro   { background:rgba(239,68,68,.15);  color:var(--erro); }
-  .badge.alerta { background:rgba(245,158,11,.15); color:var(--alerta); }
-
-  .card-cliente { color:var(--muted); font-size:11px; margin-bottom:2px; }
-  .card-doc     { font-size:10px; color:var(--muted); opacity:.7; margin-bottom:10px; }
-  .card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:10px; border-top:1px solid var(--border); }
-  .metric label { display:block; font-size:10px; color:var(--muted); margin-bottom:2px; }
-  .metric value { font-size:13px; font-weight:600; }
-  .express-bar { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
-  .express-bar-label { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:5px; }
-  .express-track { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
-  .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
-  .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
-  .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; }
-  .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
-  .chart-canvas-wrap { position:relative; height:240px; }
-  select { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:4px; outline:none; cursor:pointer; }
-  select:focus { border-color:var(--accent); }
-
-  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
-  .table-toolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-  table { width:100%; border-collapse:collapse; }
-  thead th { font-family:var(--ui); font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); white-space:nowrap; }
-  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
-  tbody tr:hover { background:rgba(255,255,255,.02); }
-  tbody tr:last-child { border-bottom:none; }
-  td { padding:8px 14px; font-size:12px; vertical-align:middle; }
-  td.muted { color:var(--muted); font-size:11px; }
-
-  .loader { display:flex; align-items:center; justify-content:center; gap:8px; padding:40px; color:var(--muted); font-size:12px; }
-  .spin { width:14px; height:14px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  ::-webkit-scrollbar { width:6px; height:6px; }
-  ::-webkit-scrollbar-track { background:var(--bg); }
-  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} }
+/* ── Modal detalhe cliente ── */
+.overlay{position:fixed;inset:0;background:#0006;z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:min(820px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px #0003}
+.modal-header{padding:16px 20px;border-bottom:1px solid #e0e4ea;display:flex;justify-content:space-between;align-items:center}
+.modal-header h2{font-size:16px;font-weight:700}
+.modal-close{background:#f3f4f6;color:#555;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer}
+.modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+.modal-info{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.info-chip{background:#f0f4ff;border-radius:8px;padding:6px 14px;font-size:12px;color:#3b5bdb;font-weight:600}
+.modal-period{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.modal-period label{font-size:12px;color:#666;font-weight:600}
+.modal-period input{height:30px;border:1px solid #d0d5dd;border-radius:6px;padding:0 8px;font-size:12px}
+.modal-period button{height:30px;background:#eef2ff;color:#3b5bdb;font-weight:600;border:1px solid #c5d0f7;font-size:12px}
+.modal-period button.active{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.modal table td,.modal table th{padding:8px 10px;font-size:12px}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stat-box{flex:1;min-width:120px;background:#f6f8fa;border-radius:8px;padding:10px 14px;text-align:center}
+.stat-box .sv{font-size:22px;font-weight:800;color:#3b5bdb}
+.stat-box .sl{font-size:11px;color:#888;margin-top:2px}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo"><div class="logo-dot"></div>SqlBackup Monitor</div>
-  <div class="header-right">
-    <span class="last-update" id="lastUpdate">—</span>
-    <button class="btn-refresh" onclick="carregarTudo()">↺ Atualizar</button>
-  </div>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7eb3ff" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+  <h1>SqlBackup Monitor</h1>
+  <span id="lastUpdate">—</span>
+  <button onclick="carregar()" style="background:#2d3f60;color:#aec8ff;border:1px solid #3d5480;margin-left:8px">↺ Atualizar</button>
 </header>
 
-<main>
-  <section>
-    <div class="section-title">Status Atual por Banco</div>
-    <div class="cards-grid" id="cardsContainer">
-      <div class="loader"><div class="spin"></div> Carregando...</div>
-    </div>
-  </section>
+<!-- FILTROS -->
+<div class="filters">
+  <div class="fgroup">
+    <label>Cliente</label>
+    <input id="fCliente" type="text" placeholder="Nome ou documento..." style="width:220px" oninput="aplicarFiltros()"/>
+  </div>
 
-  <section>
-    <div class="section-title">Tamanho do Banco ao Longo do Tempo</div>
-    <div class="chart-container">
-      <div class="chart-toolbar">
-        <div style="display:flex;gap:10px;align-items:center;">
-          <select id="selectBancoGrafico" onchange="carregarGrafico()">
-            <option value="">Todos os bancos</option>
-          </select>
-          <select id="selectDias" onchange="carregarGrafico()">
-            <option value="7">Últimos 7 dias</option>
-            <option value="30" selected>Últimos 30 dias</option>
-            <option value="90">Últimos 90 dias</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">
-          <span><span style="color:var(--accent);">●</span> Dados (GB)</span>
-          <span><span style="color:var(--accent2);">●</span> Log (GB)</span>
-        </div>
-      </div>
-      <div class="chart-canvas-wrap"><canvas id="chartTamanho"></canvas></div>
-    </div>
-  </section>
+  <div class="fgroup">
+    <label>De</label>
+    <input id="fDe" type="date" onchange="limparPeriodoBtns();aplicarFiltros()"/>
+  </div>
+  <div class="fgroup">
+    <label>Até</label>
+    <input id="fAte" type="date" onchange="limparPeriodoBtns();aplicarFiltros()"/>
+  </div>
 
-  <section>
-    <div class="section-title">Histórico de Eventos</div>
-    <div class="table-container">
-      <div class="table-toolbar">
-        <select id="filtroTipo" onchange="carregarHistorico()">
-          <option value="">Todos os tipos</option>
-          <option value="OK">✅ OK</option>
-          <option value="Erro">🚨 Erro</option>
-          <option value="Alerta">⚠️ Alerta</option>
-        </select>
-        <select id="filtroBanco" onchange="carregarHistorico()">
-          <option value="">Todos os bancos</option>
-        </select>
-        <select id="filtroLimit" onchange="carregarHistorico()">
-          <option value="50">50 registros</option>
-          <option value="100" selected>100 registros</option>
-          <option value="500">500 registros</option>
-        </select>
+  <div class="period-btns">
+    <button id="btnHoje" onclick="setPeriodo('hoje')">Hoje</button>
+    <button id="btnMes" onclick="setPeriodo('mes')">Este mês</button>
+    <button id="btnMesAnt" onclick="setPeriodo('mesant')">Mês anterior</button>
+  </div>
+
+  <div class="fgroup">
+    <label>Tipo</label>
+    <select id="fTipo" onchange="aplicarFiltros()">
+      <option value="">Todos</option>
+      <option value="OK">✅ OK</option>
+      <option value="Erro">🚨 Erro</option>
+      <option value="Alerta">⚠️ Alerta</option>
+    </select>
+  </div>
+
+  <button class="btn-clear" onclick="limparFiltros()">✕ Limpar</button>
+</div>
+
+<!-- CARDS -->
+<div class="cards" id="cards">
+  <div class="no-data" style="width:100%">Carregando...</div>
+</div>
+
+<!-- TABELA -->
+<div class="section">
+  <div class="section-title">Histórico de Eventos</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Cliente</th>
+          <th>Doc</th><th>Ciclo</th><th>Arquivo</th>
+          <th>Dados GB</th><th>Express %</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="10" class="no-data">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<div class="pagination" id="pag"></div>
+
+<!-- MODAL DETALHE CLIENTE -->
+<div class="overlay" id="overlay" onclick="fecharModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modalTitulo">Detalhe do Cliente</h2>
+      <button class="modal-close" onclick="fecharModalBtn()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info" id="modalInfo"></div>
+      <div class="stats-row" id="modalStats"></div>
+      <div class="modal-period">
+        <label>Período:</label>
+        <input id="mDe" type="date" onchange="limparModalBtns();renderModalTabela()"/>
+        <input id="mAte" type="date" onchange="limparModalBtns();renderModalTabela()"/>
+        <button id="mBtnHoje" onclick="setModalPeriodo('hoje')">Hoje</button>
+        <button id="mBtnMes" onclick="setModalPeriodo('mes')">Esta semana</button>
+        <button id="mBtnMesAnt" onclick="setModalPeriodo('mesant')">Este mês</button>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Cliente</th>
-            <th>Doc</th><th>Ciclo</th><th>Arquivo</th>
-            <th>Dados GB</th><th>Log GB</th><th>Express %</th><th>Limite</th><th>Status</th>
+            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Ciclo</th>
+            <th>Arquivo</th><th>Dados GB</th><th>Status</th>
           </tr></thead>
-          <tbody id="tabelaHistorico">
-            <tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>
-          </tbody>
+          <tbody id="modalTbody"></tbody>
         </table>
       </div>
     </div>
-  </section>
-</main>
+  </div>
+</div>
 
 <script>
-const fmt = {
-  ts: v => {
-    if (!v) return '—';
-    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  },
-  n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
-  badge: t => {
-    const k = (t||'').toLowerCase();
-    const c = k==='ok'?'ok':k==='erro'?'erro':'alerta';
-    const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
-    return `<span class="badge ${c}">${l[c]??t}</span>`;
-  },
-  cardCls: t => {const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta';},
-  exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)'
-};
+const API = ''; // mesma origem — ASP.NET Core serve o HTML e a API juntos
+let todos = [];        // todos os eventos brutos
+let filtrados = [];    // após filtros
+let paginaAtual = 1;
+const POR_PAG = 50;
+let clienteAtual = null; // para o modal
 
-let chart = null;
-
-async function carregarBancos() {
+// ── Carregar dados ────────────────────────────────────────────
+async function carregar() {
   try {
-    const bancos = await (await fetch('/api/bancos')).json();
-    ['filtroBanco','selectBancoGrafico'].forEach(id => {
-      const sel = document.getElementById(id);
-      const first = sel.options[0];
-      sel.innerHTML = ''; sel.appendChild(first);
-      bancos.forEach(b => { const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
-    });
-  } catch(e) { console.error(e); }
+    const r = await fetch(`${API}/api/backup?limit=2000`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    todos = await r.json();
+    document.getElementById('lastUpdate').textContent =
+      '↺ ' + new Date().toLocaleTimeString('pt-BR');
+    aplicarFiltros();
+  } catch(e) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="10" class="no-data">Erro ao carregar: ${e.message}</td></tr>`;
+  }
 }
 
-async function carregarResumo() {
-  const el = document.getElementById('cardsContainer');
-  try {
-    const rows = await (await fetch('/api/resumo')).json();
-    if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
-    el.innerHTML = rows.map(r => {
-      const cls  = fmt.cardCls(r.tipoBackup);
-      const isEx = (r.edicao||'').toLowerCase().includes('express');
-      const pct  = Number(r.percentualExpress||0);
-      const fc   = fmt.exprColor(pct);
-      return `
-        <div class="card ${cls}">
-          <div class="card-header">
-            <div class="card-banco">${r.bancoNome??'—'}</div>
-            ${fmt.badge(r.tipoBackup)}
-          </div>
-          <div class="card-cliente">${r.clienteNome??'—'}</div>
-          <div class="card-doc">${r.clienteCNPJ??''}</div>
-          <div class="card-metrics">
-            <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
-            <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
-            <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
-            <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
-          </div>
-          ${isEx ? `
-          <div class="express-bar">
-            <div class="express-bar-label">
-              <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
-              <span style="color:${fc}">${r.statusLimite??''}</span>
-            </div>
-            <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-          </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
-          <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
-          <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
-        </div>`;
-    }).join('');
-  } catch(e) { el.innerHTML=`<div class="loader" style="color:var(--erro)">Erro ao carregar resumo.</div>`; }
+// ── Filtros ───────────────────────────────────────────────────
+function aplicarFiltros() {
+  const cli  = norm(document.getElementById('fCliente').value);
+  const tipo = document.getElementById('fTipo').value;
+  const de   = document.getElementById('fDe').value;
+  const ate  = document.getElementById('fAte').value;
+
+  filtrados = todos.filter(r => {
+    if (cli && !norm(r.ClienteNome).includes(cli) && !norm(r.ClienteCNPJ).includes(cli)) return false;
+    if (tipo && r.TipoBackup !== tipo) return false;
+    const dt = new Date(r.DataExecucao);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    return true;
+  });
+
+  paginaAtual = 1;
+  renderCards();
+  renderTabela();
+  renderPag();
 }
 
-async function carregarGrafico() {
-  const banco = document.getElementById('selectBancoGrafico').value;
-  const dias  = document.getElementById('selectDias').value;
-  try {
-    const url  = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
-    const rows = await (await fetch(url)).json();
-    const labels  = rows.map(r => fmt.ts(r.hora).slice(0,16));
-    const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
-    const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
-    const ctx = document.getElementById('chartTamanho').getContext('2d');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
-          { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
-        ]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,
-            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}
-        },
-        scales:{
-          x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
-          y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
-        }
-      }
-    });
-  } catch(e) { console.error('Gráfico:', e); }
+function norm(s){ return (s||'').toLowerCase().replace(/[.\-\/]/g,'').trim(); }
+
+function limparFiltros() {
+  document.getElementById('fCliente').value = '';
+  document.getElementById('fTipo').value    = '';
+  document.getElementById('fDe').value      = '';
+  document.getElementById('fAte').value     = '';
+  limparPeriodoBtns();
+  aplicarFiltros();
 }
 
-async function carregarHistorico() {
-  const tbody = document.getElementById('tabelaHistorico');
-  const tipo  = document.getElementById('filtroTipo').value;
-  const banco = document.getElementById('filtroBanco').value;
-  const limit = document.getElementById('filtroLimit').value;
-  tbody.innerHTML=`<tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
-  try {
-    let url = `/api/historico?limit=${limit}`;
-    if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
-    if (banco) url += `&banco=${encodeURIComponent(banco)}`;
-    const rows = await (await fetch(url)).json();
-    if (!rows.length) { tbody.innerHTML=`<tr><td colspan="12" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
-    tbody.innerHTML = rows.map(r => {
-      const isEx = (r.edicao||'').toLowerCase().includes('express');
-      const pct  = Number(r.percentualExpress||0);
-      const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
-      return `<tr>
-        <td class="muted">${fmt.ts(r.dataExecucao)}</td>
-        <td>${fmt.badge(r.tipoBackup)}</td>
-        <td><strong>${r.bancoNome??'—'}</strong></td>
-        <td class="muted">${r.clienteNome??'—'}</td>
-        <td class="muted" style="font-size:11px">${r.clienteCNPJ??'—'}</td>
-        <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
-        <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-        <td>${fmt.n(r.tamanhoDadosGB)}</td>
-        <td>${fmt.n(r.tamanhoLogGB)}</td>
-        <td>${pctH}</td>
-        <td class="muted" style="font-size:11px;white-space:nowrap">${r.statusLimite??'—'}</td>
-        <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
-      </tr>`;
-    }).join('');
-  } catch(e) { tbody.innerHTML=`<tr><td colspan="12" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`; }
+function setPeriodo(p) {
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') {
+    de = ate = fmtDate(hoje);
+  } else if (p === 'mes') {
+    de  = fmtDate(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+    ate = fmtDate(hoje);
+  } else {
+    const m = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    de  = fmtDate(m);
+    ate = fmtDate(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
+  }
+  document.getElementById('fDe').value  = de;
+  document.getElementById('fAte').value = ate;
+  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
+  document.getElementById(p==='hoje'?'btnHoje':p==='mes'?'btnMes':'btnMesAnt').classList.add('active');
+  aplicarFiltros();
 }
 
-async function carregarTudo() {
-  document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
-  await carregarBancos();
-  await Promise.all([carregarResumo(), carregarGrafico(), carregarHistorico()]);
+function limparPeriodoBtns() {
+  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
 }
 
-carregarTudo();
-setInterval(carregarTudo, 120_000);
+function fmtDate(d) {
+  return d.toISOString().slice(0,10);
+}
+
+// ── Cards de status atual por banco ──────────────────────────
+function renderCards() {
+  // Pega o evento mais recente de cada banco dentro dos filtrados
+  const bancos = {};
+  for (const r of filtrados) {
+    const k = (r.ClienteNome||'') + '|' + (r.BancoNome||'');
+    if (!bancos[k] || new Date(r.DataExecucao) > new Date(bancos[k].DataExecucao))
+      bancos[k] = r;
+  }
+  const entries = Object.values(bancos);
+  const el = document.getElementById('cards');
+  if (!entries.length) { el.innerHTML = '<div class="no-data" style="width:100%">Nenhum dado encontrado</div>'; return; }
+
+  el.innerHTML = entries.map(r => {
+    const t = (r.TipoBackup||'').toLowerCase();
+    const cls = t==='ok'?'ok':t==='erro'?'erro':t==='alerta'?'alerta':'rodando';
+    const dt  = r.DataExecucao ? new Date(r.DataExecucao).toLocaleString('pt-BR') : '—';
+    return `<div class="card ${cls}" onclick="abrirCliente('${esc(r.ClienteNome)}','${esc(r.ClienteCNPJ)}')">
+      <div class="card-title">${esc(r.BancoNome||'—')}</div>
+      <div class="card-name">${esc(r.ClienteNome||'—')}</div>
+      <div class="card-sub" style="margin-bottom:6px">${esc(r.ClienteCNPJ||'')}</div>
+      <span class="badge ${cls}">${r.TipoBackup||'—'}</span>
+      <div class="card-sub" style="margin-top:6px">${dt}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tabela principal ──────────────────────────────────────────
+function renderTabela() {
+  const inicio = (paginaAtual-1)*POR_PAG;
+  const pg     = filtrados.slice(inicio, inicio+POR_PAG);
+  const tbody  = document.getElementById('tbody');
+  if (!pg.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="no-data">Nenhum registro encontrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pg.map(r => {
+    const t  = (r.TipoBackup||'').toLowerCase();
+    const cls = t==='ok'?'ok':t==='erro'?'erro':t==='alerta'?'alerta':'rodando';
+    const dt  = r.DataExecucao ? new Date(r.DataExecucao).toLocaleString('pt-BR') : '—';
+    return `<tr onclick="abrirCliente('${esc(r.ClienteNome)}','${esc(r.ClienteCNPJ)}')">
+      <td>${dt}</td>
+      <td><span class="badge ${cls}">${r.TipoBackup||'—'}</span></td>
+      <td>${esc(r.BancoNome||'—')}</td>
+      <td><b>${esc(r.ClienteNome||'—')}</b></td>
+      <td style="color:#888;font-size:12px">${esc(r.ClienteCNPJ||'')}</td>
+      <td style="font-size:12px">${esc(r.Ciclo||'—')}</td>
+      <td style="font-size:11px;color:#666">${esc(r.NomeArquivo||'—')}</td>
+      <td>${r.TamanhoDadosGB||'—'}</td>
+      <td>${r.PercentualExpress!=null?r.PercentualExpress+'%':'—'}</td>
+      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.Status||'')}">${esc(r.Status||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPag() {
+  const total = Math.ceil(filtrados.length / POR_PAG);
+  const el    = document.getElementById('pag');
+  if (total <= 1) { el.innerHTML=''; return; }
+  let h = `<span>${filtrados.length} registros</span>`;
+  if (paginaAtual>1) h+=`<button onclick="irPag(${paginaAtual-1})">‹</button>`;
+  const start = Math.max(1, paginaAtual-2), end = Math.min(total, paginaAtual+2);
+  for (let i=start;i<=end;i++)
+    h+=`<button class="${i===paginaAtual?'active':''}" onclick="irPag(${i})">${i}</button>`;
+  if (paginaAtual<total) h+=`<button onclick="irPag(${paginaAtual+1})">›</button>`;
+  el.innerHTML = h;
+}
+
+function irPag(n) { paginaAtual=n; renderTabela(); renderPag(); window.scrollTo(0,0); }
+
+// ── Modal detalhe cliente ─────────────────────────────────────
+function abrirCliente(nome, doc) {
+  clienteAtual = {nome, doc};
+  document.getElementById('modalTitulo').textContent = nome || 'Cliente';
+  document.getElementById('modalInfo').innerHTML =
+    `<div class="info-chip">👤 ${esc(nome||'—')}</div>
+     <div class="info-chip">📄 ${esc(doc||'—')}</div>`;
+
+  // Default: esta semana
+  setModalPeriodo('mes');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function fecharModal(e) { if(e.target===document.getElementById('overlay')) fecharModalBtn(); }
+function fecharModalBtn() {
+  document.getElementById('overlay').classList.remove('open');
+  clienteAtual = null;
+}
+
+function setModalPeriodo(p) {
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') {
+    de = ate = fmtDate(hoje);
+  } else if (p === 'mes') {
+    // Esta semana
+    const dow = hoje.getDay();
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - (dow===0?6:dow-1));
+    de  = fmtDate(seg);
+    ate = fmtDate(hoje);
+  } else {
+    de  = fmtDate(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+    ate = fmtDate(hoje);
+  }
+  document.getElementById('mDe').value  = de;
+  document.getElementById('mAte').value = ate;
+  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(p==='hoje'?'mBtnHoje':p==='mes'?'mBtnMes':'mBtnMesAnt').classList.add('active');
+  renderModalTabela();
+}
+
+function limparModalBtns() {
+  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
+}
+
+function renderModalTabela() {
+  if (!clienteAtual) return;
+  const {nome, doc} = clienteAtual;
+  const de  = document.getElementById('mDe').value;
+  const ate = document.getElementById('mAte').value;
+
+  const registros = todos.filter(r => {
+    const nomeOk = norm(r.ClienteNome) === norm(nome);
+    const docOk  = norm(r.ClienteCNPJ) === norm(doc);
+    if (!nomeOk && !docOk) return false;
+    const dt = new Date(r.DataExecucao);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    return true;
+  }).sort((a,b)=>new Date(b.DataExecucao)-new Date(a.DataExecucao));
+
+  // Stats
+  const total  = registros.length;
+  const ok     = registros.filter(r=>r.TipoBackup==='OK').length;
+  const erros  = registros.filter(r=>r.TipoBackup==='Erro').length;
+  const alertas= registros.filter(r=>r.TipoBackup==='Alerta').length;
+  document.getElementById('modalStats').innerHTML = `
+    <div class="stat-box"><div class="sv">${total}</div><div class="sl">Total</div></div>
+    <div class="stat-box"><div class="sv" style="color:#2da44e">${ok}</div><div class="sl">OK</div></div>
+    <div class="stat-box"><div class="sv" style="color:#cf222e">${erros}</div><div class="sl">Erros</div></div>
+    <div class="stat-box"><div class="sv" style="color:#d4a017">${alertas}</div><div class="sl">Alertas</div></div>`;
+
+  const tbody = document.getElementById('modalTbody');
+  if (!registros.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">Nenhum registro neste período</td></tr>';
+    return;
+  }
+  tbody.innerHTML = registros.map(r => {
+    const t   = (r.TipoBackup||'').toLowerCase();
+    const cls = t==='ok'?'ok':t==='erro'?'erro':t==='alerta'?'alerta':'rodando';
+    const dt  = r.DataExecucao ? new Date(r.DataExecucao).toLocaleString('pt-BR') : '—';
+    return `<tr>
+      <td>${dt}</td>
+      <td><span class="badge ${cls}">${r.TipoBackup||'—'}</span></td>
+      <td>${esc(r.BancoNome||'—')}</td>
+      <td style="font-size:11px">${esc(r.Ciclo||'—')}</td>
+      <td style="font-size:11px;color:#666">${esc(r.NomeArquivo||'—')}</td>
+      <td>${r.TamanhoDadosGB||'—'}</td>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.Status||'')}">${esc(r.Status||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Init ──────────────────────────────────────────────────────
+carregar();
+setInterval(carregar, 60000);
 </script>
 </body>
 </html>
