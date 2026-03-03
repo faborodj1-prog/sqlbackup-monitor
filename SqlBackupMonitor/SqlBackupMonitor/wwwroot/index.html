@@ -67,14 +67,15 @@
   .card.alerta::before { background:var(--alerta); }
 
   .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-  .card-banco { font-family:var(--ui); font-size:15px; font-weight:800; }
+  .card-banco { font-family:var(--ui); font-size:13px; font-weight:600; color:var(--muted); }
   .badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; letter-spacing:.5px; }
   .badge.ok     { background:rgba(34,197,94,.15);  color:var(--ok); }
   .badge.erro   { background:rgba(239,68,68,.15);  color:var(--erro); }
   .badge.alerta { background:rgba(245,158,11,.15); color:var(--alerta); }
 
-  .card-cliente { color:var(--muted); font-size:11px; margin-bottom:2px; }
-  .card-doc     { font-size:10px; color:var(--muted); opacity:.7; margin-bottom:10px; }
+  .card-cliente { font-family:var(--ui); font-size:16px; font-weight:800; color:var(--text); margin-bottom:3px; line-height:1.3; }
+  .card-doc     { font-size:11px; color:var(--accent); font-weight:600; margin-bottom:6px; letter-spacing:.3px; }
+  .card-banco-sub { font-size:10px; color:var(--muted); margin-bottom:10px; opacity:.7; }
   .card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:10px; border-top:1px solid var(--border); }
   .metric label { display:block; font-size:10px; color:var(--muted); margin-bottom:2px; }
   .metric value { font-size:13px; font-weight:600; }
@@ -453,7 +454,9 @@ async function carregarResumo() {
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
-  el.innerHTML = rows.map(r => {
+  // Ordena alfabeticamente pelo nome do cliente
+  const sorted = [...rows].sort((a,b) => (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
+  el.innerHTML = sorted.map(r => {
     const cls  = fmt.cardCls(r.tipoBackup);
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
@@ -467,11 +470,11 @@ function renderCards(rows) {
            data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
            onclick="onCardClick(this)">
         <div class="card-header">
-          <div class="card-banco">${r.bancoNome??'—'}</div>
+          <div class="card-cliente">${r.clienteNome??'—'}</div>
           ${fmt.badge(r.tipoBackup)}
         </div>
-        <div class="card-cliente">${r.clienteNome??'—'}</div>
         <div class="card-doc">${r.clienteCNPJ??''}</div>
+        <div class="card-banco-sub">🗄 ${r.bancoNome??'—'}</div>
         <div class="card-metrics">
           <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
           <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
@@ -485,7 +488,7 @@ function renderCards(rows) {
             <span style="color:${fc}">${r.statusLimite??''}</span>
           </div>
           <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-        </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
+        </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
         <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
         <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
       </div>`;
