@@ -326,13 +326,13 @@ function onCardClick(el) {
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
-  // Toggle: mesmo card deseleciona
-  if (cardSelecionado && cardSelecionado.bancoNome === bancoNome && cardSelecionado.clienteCNPJ === clienteCNPJ) {
+  // Toggle: mesmo card deseleciona (chave única = clienteCNPJ)
+  if (cardSelecionado && cardSelecionado.clienteCNPJ === clienteCNPJ) {
     desselecionarCard(); return;
   }
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
-    const isMe = c.dataset.banco === bancoNome && c.dataset.doc === clienteCNPJ;
+    const isMe = c.dataset.doc === clienteCNPJ;
     c.classList.toggle('selected', isMe);
     c.classList.toggle('dimmed', !isMe);
   });
@@ -413,7 +413,6 @@ function aplicarFiltroCliente() {
   // Filtra histórico: card selecionado tem prioridade
   const histFiltrado = todosHistorico.filter(r => {
     if (cardSelecionado) {
-      if (norm(r.bancoNome)   !== norm(cardSelecionado.bancoNome))   return false;
       if (norm(r.clienteCNPJ) !== norm(cardSelecionado.clienteCNPJ)) return false;
     } else {
       if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
@@ -461,9 +460,7 @@ function renderCards(rows) {
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
-    const isSel = cardSelecionado
-      && norm(r.bancoNome)   === norm(cardSelecionado.bancoNome)
-      && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
+    const isSel = cardSelecionado && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
     const isDim = cardSelecionado && !isSel;
     return `
       <div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
