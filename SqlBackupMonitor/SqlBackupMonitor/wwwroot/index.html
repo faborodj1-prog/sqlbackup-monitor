@@ -41,7 +41,7 @@
   .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* ── Filtros globais ── */
+  /* Filtros globais */
   .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
   .fg { display:flex; flex-direction:column; gap:4px; }
   .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
@@ -57,8 +57,10 @@
   .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
 
   .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s; cursor:pointer; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .25s; cursor:pointer; user-select:none; }
   .card:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
+  .card.dimmed { opacity:.3; filter:saturate(.2); }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
   .card.ok::before     { background:var(--ok); }
   .card.erro::before   { background:var(--erro); }
@@ -83,13 +85,28 @@
   .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
   .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; }
+  /* Banner filtro ativo */
+  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px;
+    background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25);
+    border-radius:6px; padding:11px 18px; font-size:12px; }
+  .filter-banner.visible { display:flex; }
+  .filter-banner span { color:var(--muted); }
+  .filter-chip { display:inline-block; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3);
+    color:var(--accent); border-radius:20px; padding:1px 10px; font-size:10px; font-weight:600; margin-left:6px; }
+  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent);
+    font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer;
+    white-space:nowrap; transition:all .15s; }
+  .btn-deselect:hover { background:rgba(59,130,246,.12); }
+
+  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; transition:border-color .25s; }
+  .chart-container.hl { border-color:rgba(59,130,246,.4); }
   .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
   .chart-canvas-wrap { position:relative; height:240px; }
   select { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:4px; outline:none; cursor:pointer; }
   select:focus { border-color:var(--accent); }
 
-  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; transition:border-color .25s; }
+  .table-container.hl { border-color:rgba(59,130,246,.4); }
   .table-toolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   table { width:100%; border-collapse:collapse; }
   thead th { font-family:var(--ui); font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); white-space:nowrap; }
@@ -106,7 +123,7 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
-  /* ── Modal detalhe cliente ── */
+  /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
   .overlay.open { display:flex; }
   .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(900px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
@@ -178,10 +195,16 @@
     </div>
   </section>
 
+  <!-- BANNER FILTRO ATIVO -->
+  <div class="filter-banner" id="filterBanner">
+    <span>🔍 Filtrando por: <span id="bannerLabel"></span></span>
+    <button class="btn-deselect" onclick="desselecionarCard()">✕ Limpar seleção</button>
+  </div>
+
   <!-- GRÁFICO -->
   <section>
     <div class="section-title">Tamanho do Banco ao Longo do Tempo</div>
-    <div class="chart-container">
+    <div class="chart-container" id="chartContainer">
       <div class="chart-toolbar">
         <div style="display:flex;gap:10px;align-items:center;">
           <select id="selectBancoGrafico" onchange="carregarGrafico()">
@@ -205,7 +228,7 @@
   <!-- HISTÓRICO -->
   <section>
     <div class="section-title">Histórico de Eventos</div>
-    <div class="table-container">
+    <div class="table-container" id="tableContainer">
       <div class="table-toolbar">
         <select id="filtroTipo" onchange="carregarHistorico()">
           <option value="">Todos os tipos</option>
@@ -270,7 +293,7 @@
 </div>
 
 <script>
-// ── Formatadores ──────────────────────────────────────────────
+// Formatadores
 const fmt = {
   ts: v => {
     if (!v) return '—';
@@ -288,13 +311,56 @@ const fmt = {
   date: d => d.toISOString().slice(0,10),
 };
 
-// ── Estado ───────────────────────────────────────────────────
-let chart = null;
-let todosResumo = [];    // todos os cards originais
-let todosHistorico = []; // todos os eventos originais
-let clienteAtual = null;
+const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
 
-// ── Filtros globais ───────────────────────────────────────────
+// Estado
+let chart = null;
+let todosResumo    = [];
+let todosHistorico = [];
+let clienteAtual   = null;
+let cardSelecionado = null; // { bancoNome, clienteCNPJ, clienteNome }
+
+// Seleção de card
+function onCardClick(el) {
+  const bancoNome   = el.dataset.banco;
+  const clienteNome = el.dataset.nome;
+  const clienteCNPJ = el.dataset.doc;
+  // Toggle: mesmo card deseleciona
+  if (cardSelecionado && cardSelecionado.bancoNome === bancoNome && cardSelecionado.clienteCNPJ === clienteCNPJ) {
+    desselecionarCard(); return;
+  }
+  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
+  document.querySelectorAll('#cardsContainer .card').forEach(c => {
+    const isMe = c.dataset.banco === bancoNome && c.dataset.doc === clienteCNPJ;
+    c.classList.toggle('selected', isMe);
+    c.classList.toggle('dimmed', !isMe);
+  });
+  document.getElementById('bannerLabel').innerHTML =
+    '<strong>' + clienteNome + '</strong><span class="filter-chip">🗄 ' + bancoNome + '</span>';
+  document.getElementById('filterBanner').classList.add('visible');
+  document.getElementById('chartContainer').classList.add('hl');
+  document.getElementById('tableContainer').classList.add('hl');
+  const sg = document.getElementById('selectBancoGrafico');
+  for (let i = 0; i < sg.options.length; i++) {
+    if (sg.options[i].value === bancoNome) { sg.selectedIndex = i; break; }
+  }
+  carregarGrafico();
+  aplicarFiltroCliente();
+  setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 60);
+}
+
+function desselecionarCard() {
+  cardSelecionado = null;
+  document.querySelectorAll('#cardsContainer .card').forEach(c => c.classList.remove('selected','dimmed'));
+  document.getElementById('filterBanner').classList.remove('visible');
+  document.getElementById('chartContainer').classList.remove('hl');
+  document.getElementById('tableContainer').classList.remove('hl');
+  document.getElementById('selectBancoGrafico').selectedIndex = 0;
+  carregarGrafico();
+  aplicarFiltroCliente();
+}
+
+// Filtros globais
 function setPeriodo(p) {
   const hoje = new Date();
   let de, ate;
@@ -303,7 +369,7 @@ function setPeriodo(p) {
   } else if (p === 'mes') {
     de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
     ate = fmt.date(hoje);
-  } else { // mesant
+  } else {
     de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1));
     ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
   }
@@ -323,17 +389,15 @@ function limparFiltros() {
   document.getElementById('fDe').value = '';
   document.getElementById('fAte').value = '';
   limparPeriodoBtns();
-  aplicarFiltroCliente();
+  desselecionarCard();
 }
-
-function norm(s) { return (s||'').toLowerCase().replace(/[.\-\/\s]/g,''); }
 
 function aplicarFiltroCliente() {
   const cli = norm(document.getElementById('fCliente').value);
   const de  = document.getElementById('fDe').value;
   const ate = document.getElementById('fAte').value;
 
-  // Filtra cards
+  // Filtra cards (filtros globais)
   const cardsFiltrados = todosResumo.filter(r => {
     if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
     if (de || ate) {
@@ -345,9 +409,14 @@ function aplicarFiltroCliente() {
   });
   renderCards(cardsFiltrados);
 
-  // Filtra histórico
+  // Filtra histórico: card selecionado tem prioridade
   const histFiltrado = todosHistorico.filter(r => {
-    if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+    if (cardSelecionado) {
+      if (norm(r.bancoNome)   !== norm(cardSelecionado.bancoNome))   return false;
+      if (norm(r.clienteCNPJ) !== norm(cardSelecionado.clienteCNPJ)) return false;
+    } else {
+      if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+    }
     if (de || ate) {
       const dt = new Date(r.dataExecucao);
       if (de  && dt < new Date(de  + 'T00:00:00')) return false;
@@ -358,7 +427,7 @@ function aplicarFiltroCliente() {
   renderHistorico(histFiltrado);
 }
 
-// ── Carregar dados da API ─────────────────────────────────────
+// API
 async function carregarBancos() {
   try {
     const bancos = await (await fetch('/api/bancos')).json();
@@ -389,8 +458,14 @@ function renderCards(rows) {
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
+    const isSel = cardSelecionado
+      && norm(r.bancoNome)   === norm(cardSelecionado.bancoNome)
+      && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
+    const isDim = cardSelecionado && !isSel;
     return `
-      <div class="card ${cls}" onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
+      <div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
+           data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
+           onclick="onCardClick(this)">
         <div class="card-header">
           <div class="card-banco">${r.bancoNome??'—'}</div>
           ${fmt.badge(r.tipoBackup)}
@@ -496,7 +571,7 @@ function renderHistorico(rows) {
   }).join('');
 }
 
-// ── Modal detalhe cliente ─────────────────────────────────────
+// Modal detalhe cliente
 function abrirCliente(nome, doc) {
   clienteAtual = { nome, doc };
   document.getElementById('modalTitulo').textContent = nome || 'Cliente';
@@ -540,7 +615,6 @@ function renderModalTabela() {
   const {nome, doc} = clienteAtual;
   const de  = document.getElementById('mDe').value;
   const ate = document.getElementById('mAte').value;
-
   const regs = todosHistorico.filter(r => {
     const nomeOk = norm(r.clienteNome) === norm(nome);
     const docOk  = norm(r.clienteCNPJ) === norm(doc);
@@ -550,23 +624,17 @@ function renderModalTabela() {
     if (ate && dt > new Date(ate + 'T23:59:59')) return false;
     return true;
   }).sort((a,b) => new Date(b.dataExecucao)-new Date(a.dataExecucao));
-
   const total   = regs.length;
   const okN     = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='ok').length;
   const erroN   = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='erro').length;
   const alertaN = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='alerta').length;
-
   document.getElementById('modalStats').innerHTML = `
     <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--erro)">${erroN}</div><div class="stat-l">Erros</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--alerta)">${alertaN}</div><div class="stat-l">Alertas</div></div>`;
-
   const tbody = document.getElementById('modalTbody');
-  if (!regs.length) {
-    tbody.innerHTML='<tr><td colspan="8" class="loader">Nenhum registro neste período.</td></tr>';
-    return;
-  }
+  if (!regs.length) { tbody.innerHTML='<tr><td colspan="8" class="loader">Nenhum registro neste período.</td></tr>'; return; }
   tbody.innerHTML = regs.map(r => {
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
@@ -584,7 +652,7 @@ function renderModalTabela() {
   }).join('');
 }
 
-// ── Carregar tudo ─────────────────────────────────────────────
+// Carregar tudo
 async function carregarTudo() {
   document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
   await carregarBancos();
