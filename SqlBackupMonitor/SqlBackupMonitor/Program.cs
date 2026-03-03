@@ -3,14 +3,10 @@ using Dapper;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles(); // serve wwwroot/index.html
 
