@@ -25,7 +25,7 @@
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
-  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:9999; }
 
   header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; }
   .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
@@ -41,7 +41,6 @@
   .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* ── Filtros globais ── */
   .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
   .fg { display:flex; flex-direction:column; gap:4px; }
   .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
@@ -56,13 +55,12 @@
   .btn-clear { height:30px; padding:0 12px; background:transparent; border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
   .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
 
+  /* Cards */
   .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-
-  /* ── Card selecionado ── */
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .2s; cursor:pointer; }
-  .card:hover { border-color:var(--accent); transform:translateY(-1px); }
-  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
-  .card.dimmed { opacity:.4; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s, transform .2s, opacity .3s, box-shadow .2s; cursor:pointer; user-select:none; }
+  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.3), 0 8px 24px rgba(0,0,0,.4); transform:translateY(-2px); }
+  .card.dimmed { opacity:.3; filter:saturate(0.2); pointer-events:auto; }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
   .card.ok::before     { background:var(--ok); }
   .card.erro::before   { background:var(--erro); }
@@ -86,30 +84,35 @@
   .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
   .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
   .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-hint { font-size:9px; color:var(--accent); margin-top:6px; opacity:0; transition:opacity .2s; letter-spacing:.5px; text-align:right; }
+  .card:hover .card-hint { opacity:.7; }
+  .card.selected .card-hint { opacity:0; }
 
-  /* ── Filtro ativo banner ── */
-  .active-filter-banner {
-    display:none; align-items:center; justify-content:space-between;
-    background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.3);
-    border-radius:6px; padding:10px 16px; font-size:12px; gap:12px;
-  }
-  .active-filter-banner.visible { display:flex; }
-  .active-filter-banner span { color:var(--accent); }
-  .active-filter-banner strong { color:var(--text); }
-  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.4); color:var(--accent); font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  /* Banner */
+  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:6px; padding:12px 18px; font-size:12px; }
+  .filter-banner.visible { display:flex; }
+  .filter-banner-info { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .filter-banner-text { color:var(--muted); }
+  .filter-banner-text strong { color:var(--text); font-family:var(--ui); }
+  .filter-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .filter-chip { background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:var(--accent); border-radius:20px; padding:2px 10px; font-size:10px; font-weight:600; }
+  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent); font-family:var(--mono); font-size:11px; padding:5px 14px; border-radius:4px; cursor:pointer; white-space:nowrap; transition:all .15s; flex-shrink:0; }
   .btn-deselect:hover { background:rgba(59,130,246,.15); }
 
-  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; }
+  /* Chart & Table highlights */
+  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; transition:border-color .3s; }
+  .chart-container.hl { border-color:rgba(59,130,246,.45); }
   .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
   .chart-canvas-wrap { position:relative; height:240px; }
   select { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:4px; outline:none; cursor:pointer; }
   select:focus { border-color:var(--accent); }
 
-  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; transition:border-color .3s; }
+  .table-container.hl { border-color:rgba(59,130,246,.45); }
   .table-toolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   table { width:100%; border-collapse:collapse; }
   thead th { font-family:var(--ui); font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); white-space:nowrap; }
-  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
   tbody tr:hover { background:rgba(59,130,246,.05); }
   tbody tr:last-child { border-bottom:none; }
   td { padding:8px 14px; font-size:12px; vertical-align:middle; }
@@ -121,7 +124,6 @@
   ::-webkit-scrollbar { width:6px; height:6px; }
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-
   @media(max-width:640px) { header{padding:0 16px} main{padding:16px} }
 </style>
 </head>
@@ -137,21 +139,20 @@
 
 <main>
 
-  <!-- FILTROS GLOBAIS -->
   <section>
     <div class="section-title">Filtros</div>
     <div class="filter-bar">
       <div class="fg">
         <label>Cliente</label>
-        <input type="text" id="fCliente" placeholder="Nome ou documento..." oninput="aplicarFiltroCliente()"/>
+        <input type="text" id="fCliente" placeholder="Nome ou documento..." oninput="aplicarFiltros()"/>
       </div>
       <div class="fg">
         <label>De</label>
-        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltros()"/>
       </div>
       <div class="fg">
         <label>Até</label>
-        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltros()"/>
       </div>
       <div class="period-btns">
         <button id="btnHoje"   onclick="setPeriodo('hoje')">Hoje</button>
@@ -162,7 +163,6 @@
     </div>
   </section>
 
-  <!-- CARDS STATUS -->
   <section>
     <div class="section-title">Status Atual por Banco</div>
     <div class="cards-grid" id="cardsContainer">
@@ -170,22 +170,25 @@
     </div>
   </section>
 
-  <!-- BANNER FILTRO ATIVO -->
-  <div class="active-filter-banner" id="activeFilterBanner">
-    <span>🔍 Filtrando por: <strong id="activeFilterLabel">—</strong></span>
+  <!-- Banner filtro ativo -->
+  <div class="filter-banner" id="filterBanner">
+    <div class="filter-banner-info">
+      <span style="font-size:14px">🔍</span>
+      <span class="filter-banner-text">Filtrando por: <strong id="bannerLabel">—</strong></span>
+      <div class="filter-chips" id="bannerChips"></div>
+    </div>
     <button class="btn-deselect" onclick="desselecionarCard()">✕ Limpar seleção</button>
   </div>
 
-  <!-- GRÁFICO -->
   <section>
     <div class="section-title">Tamanho do Banco ao Longo do Tempo</div>
-    <div class="chart-container">
+    <div class="chart-container" id="chartContainer">
       <div class="chart-toolbar">
         <div style="display:flex;gap:10px;align-items:center;">
-          <select id="selectBancoGrafico" onchange="carregarGrafico()">
+          <select id="selectBancoGrafico" onchange="renderGrafico()">
             <option value="">Todos os bancos</option>
           </select>
-          <select id="selectDias" onchange="carregarGrafico()">
+          <select id="selectDias" onchange="renderGrafico()">
             <option value="7">Últimos 7 dias</option>
             <option value="30" selected>Últimos 30 dias</option>
             <option value="90">Últimos 90 dias</option>
@@ -200,21 +203,20 @@
     </div>
   </section>
 
-  <!-- HISTÓRICO -->
   <section>
     <div class="section-title">Histórico de Eventos</div>
-    <div class="table-container">
+    <div class="table-container" id="tableContainer">
       <div class="table-toolbar">
-        <select id="filtroTipo" onchange="carregarHistorico()">
+        <select id="filtroTipo" onchange="aplicarFiltros()">
           <option value="">Todos os tipos</option>
-          <option value="OK">✅ OK</option>
-          <option value="Erro">🚨 Erro</option>
-          <option value="Alerta">⚠️ Alerta</option>
+          <option value="ok">✅ OK</option>
+          <option value="erro">🚨 Erro</option>
+          <option value="alerta">⚠️ Alerta</option>
         </select>
-        <select id="filtroBanco" onchange="carregarHistorico()">
+        <select id="filtroBanco" onchange="aplicarFiltros()">
           <option value="">Todos os bancos</option>
         </select>
-        <select id="filtroLimit" onchange="carregarHistorico()">
+        <select id="filtroLimit" onchange="aplicarFiltros()">
           <option value="50">50 registros</option>
           <option value="100" selected>100 registros</option>
           <option value="500">500 registros</option>
@@ -234,318 +236,275 @@
       </div>
     </div>
   </section>
+
 </main>
 
 <script>
-// ── Formatadores ──────────────────────────────────────────────
+// ── DADOS MOCK ────────────────────────────────────────────────
+// Em produção substitua todosResumo e todosHistorico pelos dados
+// retornados pelas suas chamadas fetch('/api/resumo') etc.
+const MOCK_RESUMO = [
+  { bancoNome:'AdventureWorks', clienteNome:'Empresa Alpha Ltda',  clienteCNPJ:'11.222.333/0001-44', tipoBackup:'OK',     tamanhoDadosGB:4.821, tamanhoLogGB:0.312, servidor:'SRV-01', recovery:'Full',   edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'Backup concluído com sucesso',                   dataExecucao:'2025-03-03T08:15:00' },
+  { bancoNome:'Northwind',      clienteNome:'Beta Comércio SA',    clienteCNPJ:'22.333.444/0001-55', tipoBackup:'Erro',   tamanhoDadosGB:2.104, tamanhoLogGB:1.050, servidor:'SRV-02', recovery:'Simple', edicao:'Express',  percentualExpress:21.0, statusLimite:'Dentro do limite',     status:'Falha na conexão com servidor de destino',        dataExecucao:'2025-03-03T07:45:00' },
+  { bancoNome:'ContasDB',       clienteNome:'Gama Serviços ME',    clienteCNPJ:'33.444.555/0001-66', tipoBackup:'Alerta', tamanhoDadosGB:8.990, tamanhoLogGB:0.880, servidor:'SRV-01', recovery:'Full',   edicao:'Express',  percentualExpress:89.9, statusLimite:'⚠️ Próximo do limite', status:'Banco Express acima de 80% do limite de 10 GB',   dataExecucao:'2025-03-03T09:00:00' },
+  { bancoNome:'VendasProd',     clienteNome:'Delta Indústria SA',  clienteCNPJ:'44.555.666/0001-77', tipoBackup:'OK',     tamanhoDadosGB:1.230, tamanhoLogGB:0.100, servidor:'SRV-03', recovery:'Full',   edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'Backup incremental OK',                          dataExecucao:'2025-03-03T06:30:00' },
+  { bancoNome:'RHSistema',      clienteNome:'Épsilon Tech EIRELI', clienteCNPJ:'55.666.777/0001-88', tipoBackup:'OK',     tamanhoDadosGB:0.540, tamanhoLogGB:0.040, servidor:'SRV-02', recovery:'Simple', edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'OK',                                             dataExecucao:'2025-03-03T08:00:00' },
+  { bancoNome:'LogisticaDB',    clienteNome:'Zeta Transportes',    clienteCNPJ:'66.777.888/0001-99', tipoBackup:'Erro',   tamanhoDadosGB:3.670, tamanhoLogGB:0.210, servidor:'SRV-03', recovery:'Full',   edicao:'Express',  percentualExpress:36.7, statusLimite:'Dentro do limite',     status:'Timeout durante compressão do arquivo',          dataExecucao:'2025-03-02T23:55:00' },
+];
+
+const MOCK_HISTORICO = (function() {
+  const lista = [];
+  const tipos = ['OK','OK','OK','OK','Alerta','Erro'];
+  const ciclos = ['FULL','DIFF','LOG'];
+  const ref = new Date('2025-03-03T10:00:00');
+  for (let i = 0; i < 200; i++) {
+    const base = MOCK_RESUMO[i % MOCK_RESUMO.length];
+    const dt   = new Date(ref - i * 1000 * 3600 * 4);
+    const tipo = tipos[i % tipos.length];
+    lista.push({
+      ...base,
+      tipoBackup: tipo,
+      ciclo: ciclos[i % 3],
+      nomeArquivo: base.bancoNome + '_' + dt.toISOString().slice(0,10) + '_' + ciclos[i%3] + '.bak',
+      dataExecucao: dt.toISOString(),
+      status: tipo==='Erro' ? 'Falha no processo de backup' : tipo==='Alerta' ? 'Banco acima de 80% do limite' : 'Backup concluído com sucesso',
+    });
+  }
+  return lista;
+})();
+
+const MOCK_TAMANHO = (function() {
+  const m = {};
+  const ref = new Date('2025-03-03T10:00:00');
+  MOCK_RESUMO.forEach(b => {
+    m[b.bancoNome] = Array.from({length:90}, (_,i) => {
+      const d = new Date(ref - (89-i)*86400000);
+      return {
+        hora: d.toISOString(),
+        dados_gb: +(b.tamanhoDadosGB + (Math.random()-.5)*.4).toFixed(3),
+        log_gb:   +(b.tamanhoLogGB   + (Math.random()-.5)*.05).toFixed(3),
+      };
+    });
+  });
+  return m;
+})();
+
+// ── ESTADO ────────────────────────────────────────────────────
+let chart          = null;
+let todosResumo    = [];
+let todosHistorico = [];
+let cardSelecionado = null; // { bancoNome, clienteCNPJ, clienteNome }
+
+// ── UTIL ──────────────────────────────────────────────────────
+const norm = s => (s||'').toLowerCase().replace(/[\.\-\/\s]/g,'');
 const fmt = {
-  ts: v => {
-    if (!v) return '—';
-    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  },
-  n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
+  ts: v => v ? new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—',
+  n:  (v,d=3) => v!=null ? Number(v).toFixed(d) : '—',
+  date: d => d.toISOString().slice(0,10),
   badge: t => {
-    const k = (t||'').toLowerCase();
-    const c = k==='ok'?'ok':k==='erro'?'erro':'alerta';
-    const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
-    return `<span class="badge ${c}">${l[c]??t}</span>`;
+    const k=(t||'').toLowerCase();
+    const c=k==='ok'?'ok':k==='erro'?'erro':'alerta';
+    return `<span class="badge ${c}">${{ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'}[c]??t}</span>`;
   },
   cardCls: t => { const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta'; },
   exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
-  date: d => d.toISOString().slice(0,10),
 };
 
-// ── Estado ───────────────────────────────────────────────────
-let chart = null;
-let todosResumo    = [];
-let todosHistorico = [];
-
-// Card selecionado: { bancoNome, clienteNome, clienteCNPJ } | null
-let cardSelecionado = null;
-
-// ── Seleção de card ───────────────────────────────────────────
+// ── SELEÇÃO DE CARD ───────────────────────────────────────────
 function selecionarCard(bancoNome, clienteNome, clienteCNPJ) {
-  // Toggle: clicando no mesmo card deseleciona
-  if (
-    cardSelecionado &&
-    cardSelecionado.bancoNome === bancoNome &&
-    cardSelecionado.clienteCNPJ === clienteCNPJ
-  ) {
+  // Toggle: clica no mesmo → deseleciona
+  if (cardSelecionado && cardSelecionado.bancoNome === bancoNome && cardSelecionado.clienteCNPJ === clienteCNPJ) {
     desselecionarCard();
     return;
   }
 
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
 
-  // Visual dos cards
-  document.querySelectorAll('#cardsContainer .card').forEach(el => {
-    const isSelected = el.dataset.banco === bancoNome && el.dataset.doc === clienteCNPJ;
-    el.classList.toggle('selected', isSelected);
-    el.classList.toggle('dimmed', !isSelected);
-  });
-
   // Banner
-  const banner = document.getElementById('activeFilterBanner');
-  const label  = document.getElementById('activeFilterLabel');
-  label.textContent = `${bancoNome} — ${clienteNome}`;
-  banner.classList.add('visible');
+  document.getElementById('bannerLabel').textContent = clienteNome;
+  document.getElementById('bannerChips').innerHTML =
+    `<span class="filter-chip">🗄 ${bancoNome}</span><span class="filter-chip">📄 ${clienteCNPJ}</span>`;
+  document.getElementById('filterBanner').classList.add('visible');
 
-  // Atualiza gráfico: seleciona o banco no select e recarrega
-  const sel = document.getElementById('selectBancoGrafico');
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === bancoNome) { sel.selectedIndex = i; break; }
-  }
-  carregarGrafico();
+  // Highlight borda
+  document.getElementById('chartContainer').classList.add('hl');
+  document.getElementById('tableContainer').classList.add('hl');
 
-  // Atualiza histórico: seleciona o banco no select e recarrega
-  const selH = document.getElementById('filtroBanco');
-  for (let i = 0; i < selH.options.length; i++) {
-    if (selH.options[i].value === bancoNome) { selH.selectedIndex = i; break; }
-  }
+  // Seleciona banco no select do gráfico
+  const sg = document.getElementById('selectBancoGrafico');
+  for (let i=0;i<sg.options.length;i++) { if (sg.options[i].value===bancoNome){sg.selectedIndex=i;break;} }
 
-  // Renderiza histórico filtrado pelo banco + cliente
-  aplicarFiltroComCard();
+  renderGrafico();
+  aplicarFiltros(); // também redesenha os cards com dimmed/selected
 
-  // Scroll suave até o gráfico
-  document.querySelector('.chart-container')
-    .scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Scroll suave
+  setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 80);
 }
 
 function desselecionarCard() {
   cardSelecionado = null;
-
-  document.querySelectorAll('#cardsContainer .card').forEach(el => {
-    el.classList.remove('selected', 'dimmed');
-  });
-
-  document.getElementById('activeFilterBanner').classList.remove('visible');
-
-  // Reseta selects
+  document.getElementById('filterBanner').classList.remove('visible');
+  document.getElementById('chartContainer').classList.remove('hl');
+  document.getElementById('tableContainer').classList.remove('hl');
   document.getElementById('selectBancoGrafico').selectedIndex = 0;
-  document.getElementById('filtroBanco').selectedIndex = 0;
-
-  carregarGrafico();
-  aplicarFiltroCliente();
+  renderGrafico();
+  aplicarFiltros();
 }
 
-// ── Filtros globais ───────────────────────────────────────────
+// ── FILTROS ───────────────────────────────────────────────────
 function setPeriodo(p) {
-  const hoje = new Date();
-  let de, ate;
-  if (p === 'hoje') {
-    de = ate = fmt.date(hoje);
-  } else if (p === 'mes') {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
-    ate = fmt.date(hoje);
-  } else {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1));
-    ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
-  }
-  document.getElementById('fDe').value  = de;
-  document.getElementById('fAte').value = ate;
-  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
+  const h = new Date(); let de, ate;
+  if (p==='hoje') { de=ate=fmt.date(h); }
+  else if (p==='mes') { de=fmt.date(new Date(h.getFullYear(),h.getMonth(),1)); ate=fmt.date(h); }
+  else { de=fmt.date(new Date(h.getFullYear(),h.getMonth()-1,1)); ate=fmt.date(new Date(h.getFullYear(),h.getMonth(),0)); }
+  document.getElementById('fDe').value=de; document.getElementById('fAte').value=ate;
+  document.querySelectorAll('.period-btns button').forEach(b=>b.classList.remove('active'));
   document.getElementById(p==='hoje'?'btnHoje':p==='mes'?'btnMes':'btnMesAnt').classList.add('active');
-  aplicarFiltroCliente();
+  aplicarFiltros();
 }
-
-function limparPeriodoBtns() {
-  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
-}
-
+function limparPeriodoBtns() { document.querySelectorAll('.period-btns button').forEach(b=>b.classList.remove('active')); }
 function limparFiltros() {
-  document.getElementById('fCliente').value = '';
-  document.getElementById('fDe').value = '';
-  document.getElementById('fAte').value = '';
+  document.getElementById('fCliente').value='';
+  document.getElementById('fDe').value='';
+  document.getElementById('fAte').value='';
   limparPeriodoBtns();
   desselecionarCard();
 }
 
-function norm(s) { return (s||'').toLowerCase().replace(/[.\-\/\s]/g,''); }
+// ── FILTRO CENTRAL ────────────────────────────────────────────
+function aplicarFiltros() {
+  const cli   = norm(document.getElementById('fCliente').value);
+  const de    = document.getElementById('fDe').value;
+  const ate   = document.getElementById('fAte').value;
+  const tipo  = (document.getElementById('filtroTipo').value||'').toLowerCase();
+  const banco = document.getElementById('filtroBanco').value;
+  const limit = parseInt(document.getElementById('filtroLimit').value)||100;
 
-// Filtro global (sem seleção de card)
-function aplicarFiltroCliente() {
-  if (cardSelecionado) { aplicarFiltroComCard(); return; }
-
-  const cli = norm(document.getElementById('fCliente').value);
-  const de  = document.getElementById('fDe').value;
-  const ate = document.getElementById('fAte').value;
-
+  // Filtra cards (sem cardSelecionado influir — sempre mostra todos com estilo)
   const cardsFiltrados = todosResumo.filter(r => {
     if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
-    if (de || ate) {
-      const dt = new Date(r.dataExecucao);
-      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    }
+    if (de && new Date(r.dataExecucao) < new Date(de+'T00:00:00')) return false;
+    if (ate && new Date(r.dataExecucao) > new Date(ate+'T23:59:59')) return false;
     return true;
   });
   renderCards(cardsFiltrados);
 
+  // Filtra histórico
   const histFiltrado = todosHistorico.filter(r => {
-    if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
-    if (de || ate) {
-      const dt = new Date(r.dataExecucao);
-      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    // Se card selecionado: filtra exato por banco + CNPJ
+    if (cardSelecionado) {
+      if (norm(r.bancoNome) !== norm(cardSelecionado.bancoNome)) return false;
+      if (norm(r.clienteCNPJ) !== norm(cardSelecionado.clienteCNPJ)) return false;
+    } else {
+      if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+      if (banco && norm(r.bancoNome) !== norm(banco)) return false;
     }
+    if (tipo && (r.tipoBackup||'').toLowerCase() !== tipo) return false;
+    if (de && new Date(r.dataExecucao) < new Date(de+'T00:00:00')) return false;
+    if (ate && new Date(r.dataExecucao) > new Date(ate+'T23:59:59')) return false;
     return true;
   });
-  renderHistorico(histFiltrado);
+
+  renderHistorico(histFiltrado.slice(0, limit));
 }
 
-// Filtro com card selecionado: combina filtro global + banco + cliente
-function aplicarFiltroComCard() {
-  if (!cardSelecionado) { aplicarFiltroCliente(); return; }
-
-  const { bancoNome, clienteCNPJ } = cardSelecionado;
-  const de  = document.getElementById('fDe').value;
-  const ate = document.getElementById('fAte').value;
-
-  const histFiltrado = todosHistorico.filter(r => {
-    if (norm(r.bancoNome) !== norm(bancoNome)) return false;
-    if (norm(r.clienteCNPJ) !== norm(clienteCNPJ)) return false;
-    if (de || ate) {
-      const dt = new Date(r.dataExecucao);
-      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    }
-    return true;
-  });
-  renderHistorico(histFiltrado);
-}
-
-// ── Carregar dados da API ─────────────────────────────────────
-async function carregarBancos() {
-  try {
-    const bancos = await (await fetch('/api/bancos')).json();
-    ['filtroBanco','selectBancoGrafico'].forEach(id => {
-      const sel = document.getElementById(id);
-      const first = sel.options[0];
-      sel.innerHTML = ''; sel.appendChild(first);
-      bancos.forEach(b => { const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
-    });
-  } catch(e) { console.error(e); }
-}
-
-async function carregarResumo() {
-  const el = document.getElementById('cardsContainer');
-  try {
-    todosResumo = await (await fetch('/api/resumo')).json();
-    aplicarFiltroCliente();
-  } catch(e) {
-    el.innerHTML=`<div class="loader" style="color:var(--erro)">Erro ao carregar resumo.</div>`;
-  }
-}
-
+// ── RENDER CARDS ──────────────────────────────────────────────
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
   el.innerHTML = rows.map(r => {
-    const cls  = fmt.cardCls(r.tipoBackup);
-    const isEx = (r.edicao||'').toLowerCase().includes('express');
-    const pct  = Number(r.percentualExpress||0);
-    const fc   = fmt.exprColor(pct);
+    const cls    = fmt.cardCls(r.tipoBackup);
+    const isEx   = (r.edicao||'').toLowerCase().includes('express');
+    const pct    = Number(r.percentualExpress||0);
+    const fc     = fmt.exprColor(pct);
+    const isSel  = cardSelecionado && norm(r.bancoNome)===norm(cardSelecionado.bancoNome) && norm(r.clienteCNPJ)===norm(cardSelecionado.clienteCNPJ);
+    const isDim  = cardSelecionado && !isSel;
 
-    // Identifica se este card está selecionado
-    const isSel = cardSelecionado &&
-      norm(r.bancoNome) === norm(cardSelecionado.bancoNome) &&
-      norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
-    const isDimmed = cardSelecionado && !isSel;
-
-    return `
-      <div class="card ${cls}${isSel?' selected':''}${isDimmed?' dimmed':''}"
-           data-banco="${r.bancoNome??''}"
-           data-doc="${r.clienteCNPJ??''}"
-           onclick="selecionarCard(${JSON.stringify(r.bancoNome)},${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
-        <div class="card-header">
-          <div class="card-banco">${r.bancoNome??'—'}</div>
-          ${fmt.badge(r.tipoBackup)}
+    // Usando atributos data-* para evitar escaping de aspas no onclick
+    return `<div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
+      data-banco="${r.bancoNome}" data-nome="${r.clienteNome}" data-doc="${r.clienteCNPJ}"
+      onclick="onCardClick(this)">
+      <div class="card-header">
+        <div class="card-banco">${r.bancoNome??'—'}</div>
+        ${fmt.badge(r.tipoBackup)}
+      </div>
+      <div class="card-cliente">${r.clienteNome??'—'}</div>
+      <div class="card-doc">${r.clienteCNPJ??''}</div>
+      <div class="card-metrics">
+        <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
+        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
+        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
+        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
+      </div>
+      ${isEx ? `
+      <div class="express-bar">
+        <div class="express-bar-label">
+          <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
+          <span style="color:${fc}">${r.statusLimite??''}</span>
         </div>
-        <div class="card-cliente">${r.clienteNome??'—'}</div>
-        <div class="card-doc">${r.clienteCNPJ??''}</div>
-        <div class="card-metrics">
-          <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
-          <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
-          <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
-          <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
-        </div>
-        ${isEx ? `
-        <div class="express-bar">
-          <div class="express-bar-label">
-            <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
-            <span style="color:${fc}">${r.statusLimite??''}</span>
-          </div>
-          <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-        </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
-        <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
-        <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
-      </div>`;
+        <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
+      </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
+      <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
+      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
+      <div class="card-hint">▼ clique para filtrar</div>
+    </div>`;
   }).join('');
 }
 
-async function carregarGrafico() {
-  const banco = document.getElementById('selectBancoGrafico').value;
-  const dias  = document.getElementById('selectDias').value;
-  try {
-    const url  = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
-    const rows = await (await fetch(url)).json();
-    const labels  = rows.map(r => fmt.ts(r.hora).slice(0,16));
-    const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
-    const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
-    const ctx = document.getElementById('chartTamanho').getContext('2d');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
-          { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
-        ]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,
-            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}
-        },
-        scales:{
-          x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
-          y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
-        }
-      }
-    });
-  } catch(e) { console.error('Gráfico:', e); }
+// Lê data-* do elemento clicado — sem problemas de encoding de aspas
+function onCardClick(el) {
+  selecionarCard(el.dataset.banco, el.dataset.nome, el.dataset.doc);
 }
 
-async function carregarHistorico() {
-  const tipo  = document.getElementById('filtroTipo').value;
-  const banco = document.getElementById('filtroBanco').value;
-  const limit = document.getElementById('filtroLimit').value;
-  document.getElementById('tabelaHistorico').innerHTML=
-    `<tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
-  try {
-    let url = `/api/historico?limit=${limit}`;
-    if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
-    if (banco) url += `&banco=${encodeURIComponent(banco)}`;
-    todosHistorico = await (await fetch(url)).json();
-    if (cardSelecionado) aplicarFiltroComCard();
-    else aplicarFiltroCliente();
-  } catch(e) {
-    document.getElementById('tabelaHistorico').innerHTML=
-      `<tr><td colspan="12" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+// ── RENDER GRÁFICO ────────────────────────────────────────────
+function renderGrafico() {
+  const bancoSel = cardSelecionado ? cardSelecionado.bancoNome : document.getElementById('selectBancoGrafico').value;
+  const dias = parseInt(document.getElementById('selectDias').value)||30;
+  let rows = [];
+
+  if (bancoSel && MOCK_TAMANHO[bancoSel]) {
+    rows = MOCK_TAMANHO[bancoSel].slice(-dias);
+  } else {
+    const keys = Object.keys(MOCK_TAMANHO);
+    const len  = MOCK_TAMANHO[keys[0]]?.length ?? 0;
+    for (let i = Math.max(0,len-dias); i < len; i++) {
+      let dados=0, log=0;
+      keys.forEach(k=>{ dados+=+(MOCK_TAMANHO[k][i]?.dados_gb||0); log+=+(MOCK_TAMANHO[k][i]?.log_gb||0); });
+      rows.push({ hora:MOCK_TAMANHO[keys[0]][i].hora, dados_gb:+dados.toFixed(3), log_gb:+log.toFixed(3) });
+    }
   }
+
+  const labels  = rows.map(r => fmt.ts(r.hora).slice(0,10));
+  const dadosGb = rows.map(r => +r.dados_gb);
+  const logGb   = rows.map(r => +r.log_gb);
+  const ctx = document.getElementById('chartTamanho').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx,{
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
+      { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
+        y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
+      }
+    }
+  });
 }
 
+// ── RENDER HISTÓRICO ──────────────────────────────────────────
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
   if (!rows.length) { tbody.innerHTML=`<tr><td colspan="12" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
   tbody.innerHTML = rows.map(r => {
-    const isEx = (r.edicao||'').toLowerCase().includes('express');
-    const pct  = Number(r.percentualExpress||0);
-    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
+    const isEx=(r.edicao||'').toLowerCase().includes('express');
+    const pct=Number(r.percentualExpress||0);
+    const pctH=isEx?`<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>`:`<span class="muted">—</span>`;
     return `<tr>
       <td class="muted">${fmt.ts(r.dataExecucao)}</td>
       <td>${fmt.badge(r.tipoBackup)}</td>
@@ -554,8 +513,7 @@ function renderHistorico(rows) {
       <td class="muted" style="font-size:11px">${r.clienteCNPJ??'—'}</td>
       <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-      <td>${fmt.n(r.tamanhoDadosGB)}</td>
-      <td>${fmt.n(r.tamanhoLogGB)}</td>
+      <td>${fmt.n(r.tamanhoDadosGB)}</td><td>${fmt.n(r.tamanhoLogGB)}</td>
       <td>${pctH}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${r.statusLimite??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
@@ -563,11 +521,25 @@ function renderHistorico(rows) {
   }).join('');
 }
 
-// ── Carregar tudo ─────────────────────────────────────────────
-async function carregarTudo() {
+// ── POPULA SELECTS ────────────────────────────────────────────
+function popularSelects() {
+  const bancos = [...new Set(MOCK_RESUMO.map(r=>r.bancoNome))].sort();
+  ['filtroBanco','selectBancoGrafico'].forEach(id => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0]; sel.innerHTML=''; sel.appendChild(first);
+    bancos.forEach(b=>{ const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+function carregarTudo() {
   document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
-  await carregarBancos();
-  await Promise.all([carregarResumo(), carregarGrafico(), carregarHistorico()]);
+  // Em produção: todosResumo = await fetch('/api/resumo').then(r=>r.json()); etc.
+  todosResumo    = MOCK_RESUMO;
+  todosHistorico = MOCK_HISTORICO;
+  popularSelects();
+  aplicarFiltros();
+  renderGrafico();
 }
 
 carregarTudo();
