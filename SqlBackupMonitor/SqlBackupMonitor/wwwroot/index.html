@@ -25,7 +25,7 @@
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
-  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:9999; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
 
   header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; }
   .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
@@ -41,6 +41,7 @@
   .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
+  /* ── Filtros globais ── */
   .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
   .fg { display:flex; flex-direction:column; gap:4px; }
   .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
@@ -55,12 +56,9 @@
   .btn-clear { height:30px; padding:0 12px; background:transparent; border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
   .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
 
-  /* Cards */
   .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s, transform .2s, opacity .3s, box-shadow .2s; cursor:pointer; user-select:none; }
-  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
-  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.3), 0 8px 24px rgba(0,0,0,.4); transform:translateY(-2px); }
-  .card.dimmed { opacity:.3; filter:saturate(0.2); pointer-events:auto; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s; cursor:pointer; }
+  .card:hover { border-color:var(--accent); transform:translateY(-1px); }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
   .card.ok::before     { background:var(--ok); }
   .card.erro::before   { background:var(--erro); }
@@ -84,35 +82,18 @@
   .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
   .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
   .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .card-hint { font-size:9px; color:var(--accent); margin-top:6px; opacity:0; transition:opacity .2s; letter-spacing:.5px; text-align:right; }
-  .card:hover .card-hint { opacity:.7; }
-  .card.selected .card-hint { opacity:0; }
 
-  /* Banner */
-  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:6px; padding:12px 18px; font-size:12px; }
-  .filter-banner.visible { display:flex; }
-  .filter-banner-info { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .filter-banner-text { color:var(--muted); }
-  .filter-banner-text strong { color:var(--text); font-family:var(--ui); }
-  .filter-chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .filter-chip { background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:var(--accent); border-radius:20px; padding:2px 10px; font-size:10px; font-weight:600; }
-  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent); font-family:var(--mono); font-size:11px; padding:5px 14px; border-radius:4px; cursor:pointer; white-space:nowrap; transition:all .15s; flex-shrink:0; }
-  .btn-deselect:hover { background:rgba(59,130,246,.15); }
-
-  /* Chart & Table highlights */
-  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; transition:border-color .3s; }
-  .chart-container.hl { border-color:rgba(59,130,246,.45); }
+  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; }
   .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
   .chart-canvas-wrap { position:relative; height:240px; }
   select { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:4px; outline:none; cursor:pointer; }
   select:focus { border-color:var(--accent); }
 
-  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; transition:border-color .3s; }
-  .table-container.hl { border-color:rgba(59,130,246,.45); }
+  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
   .table-toolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   table { width:100%; border-collapse:collapse; }
   thead th { font-family:var(--ui); font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); white-space:nowrap; }
-  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
   tbody tr:hover { background:rgba(59,130,246,.05); }
   tbody tr:last-child { border-bottom:none; }
   td { padding:8px 14px; font-size:12px; vertical-align:middle; }
@@ -124,7 +105,32 @@
   ::-webkit-scrollbar { width:6px; height:6px; }
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} }
+
+  /* ── Modal detalhe cliente ── */
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
+  .overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(900px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+  .modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+  .modal-header h2 { font-family:var(--ui); font-size:15px; font-weight:800; }
+  .modal-close { background:transparent; border:1px solid var(--border2); color:var(--muted); width:30px; height:30px; border-radius:4px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .modal-close:hover { border-color:var(--erro); color:var(--erro); }
+  .modal-body { padding:18px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px; }
+  .modal-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:var(--bg); border:1px solid var(--border2); border-radius:4px; padding:4px 12px; font-size:11px; color:var(--muted); }
+  .chip b { color:var(--text); }
+  .modal-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px 16px; text-align:center; }
+  .stat-v { font-family:var(--ui); font-size:24px; font-weight:800; }
+  .stat-l { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1px; text-transform:uppercase; }
+  .modal-period { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .modal-period label { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+  .modal-period input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:4px; height:28px; outline:none; color-scheme:dark; }
+  .modal-period input:focus { border-color:var(--accent); }
+  .modal-period button { height:28px; padding:0 10px; background:var(--bg); border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .modal-period button:hover { border-color:var(--accent); color:var(--accent); }
+  .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
 </style>
 </head>
 <body>
@@ -139,20 +145,21 @@
 
 <main>
 
+  <!-- FILTROS GLOBAIS -->
   <section>
     <div class="section-title">Filtros</div>
     <div class="filter-bar">
       <div class="fg">
         <label>Cliente</label>
-        <input type="text" id="fCliente" placeholder="Nome ou documento..." oninput="aplicarFiltros()"/>
+        <input type="text" id="fCliente" placeholder="Nome ou documento..." oninput="aplicarFiltroCliente()"/>
       </div>
       <div class="fg">
         <label>De</label>
-        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltros()"/>
+        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
       </div>
       <div class="fg">
         <label>Até</label>
-        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltros()"/>
+        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
       </div>
       <div class="period-btns">
         <button id="btnHoje"   onclick="setPeriodo('hoje')">Hoje</button>
@@ -163,6 +170,7 @@
     </div>
   </section>
 
+  <!-- CARDS STATUS -->
   <section>
     <div class="section-title">Status Atual por Banco</div>
     <div class="cards-grid" id="cardsContainer">
@@ -170,25 +178,16 @@
     </div>
   </section>
 
-  <!-- Banner filtro ativo -->
-  <div class="filter-banner" id="filterBanner">
-    <div class="filter-banner-info">
-      <span style="font-size:14px">🔍</span>
-      <span class="filter-banner-text">Filtrando por: <strong id="bannerLabel">—</strong></span>
-      <div class="filter-chips" id="bannerChips"></div>
-    </div>
-    <button class="btn-deselect" onclick="desselecionarCard()">✕ Limpar seleção</button>
-  </div>
-
+  <!-- GRÁFICO -->
   <section>
     <div class="section-title">Tamanho do Banco ao Longo do Tempo</div>
-    <div class="chart-container" id="chartContainer">
+    <div class="chart-container">
       <div class="chart-toolbar">
         <div style="display:flex;gap:10px;align-items:center;">
-          <select id="selectBancoGrafico" onchange="renderGrafico()">
+          <select id="selectBancoGrafico" onchange="carregarGrafico()">
             <option value="">Todos os bancos</option>
           </select>
-          <select id="selectDias" onchange="renderGrafico()">
+          <select id="selectDias" onchange="carregarGrafico()">
             <option value="7">Últimos 7 dias</option>
             <option value="30" selected>Últimos 30 dias</option>
             <option value="90">Últimos 90 dias</option>
@@ -203,20 +202,21 @@
     </div>
   </section>
 
+  <!-- HISTÓRICO -->
   <section>
     <div class="section-title">Histórico de Eventos</div>
-    <div class="table-container" id="tableContainer">
+    <div class="table-container">
       <div class="table-toolbar">
-        <select id="filtroTipo" onchange="aplicarFiltros()">
+        <select id="filtroTipo" onchange="carregarHistorico()">
           <option value="">Todos os tipos</option>
-          <option value="ok">✅ OK</option>
-          <option value="erro">🚨 Erro</option>
-          <option value="alerta">⚠️ Alerta</option>
+          <option value="OK">✅ OK</option>
+          <option value="Erro">🚨 Erro</option>
+          <option value="Alerta">⚠️ Alerta</option>
         </select>
-        <select id="filtroBanco" onchange="aplicarFiltros()">
+        <select id="filtroBanco" onchange="carregarHistorico()">
           <option value="">Todos os bancos</option>
         </select>
-        <select id="filtroLimit" onchange="aplicarFiltros()">
+        <select id="filtroLimit" onchange="carregarHistorico()">
           <option value="50">50 registros</option>
           <option value="100" selected>100 registros</option>
           <option value="500">500 registros</option>
@@ -236,276 +236,250 @@
       </div>
     </div>
   </section>
-
 </main>
 
+<!-- MODAL DETALHE CLIENTE -->
+<div class="overlay" id="overlay" onclick="fecharOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitulo">Detalhe do Cliente</h2>
+      <button class="modal-close" onclick="fecharModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-chips" id="modalChips"></div>
+      <div class="modal-stats" id="modalStats"></div>
+      <div class="modal-period">
+        <label>Período:</label>
+        <input type="date" id="mDe"  onchange="limparModalBtns();renderModalTabela()"/>
+        <input type="date" id="mAte" onchange="limparModalBtns();renderModalTabela()"/>
+        <button id="mBtnHoje"   onclick="setModalPeriodo('hoje')">Hoje</button>
+        <button id="mBtnSemana" onclick="setModalPeriodo('semana')" class="active">Esta semana</button>
+        <button id="mBtnMes"    onclick="setModalPeriodo('mes')">Este mês</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Ciclo</th>
+            <th>Arquivo</th><th>Dados GB</th><th>Express %</th><th>Status</th>
+          </tr></thead>
+          <tbody id="modalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-// ── DADOS MOCK ────────────────────────────────────────────────
-// Em produção substitua todosResumo e todosHistorico pelos dados
-// retornados pelas suas chamadas fetch('/api/resumo') etc.
-const MOCK_RESUMO = [
-  { bancoNome:'AdventureWorks', clienteNome:'Empresa Alpha Ltda',  clienteCNPJ:'11.222.333/0001-44', tipoBackup:'OK',     tamanhoDadosGB:4.821, tamanhoLogGB:0.312, servidor:'SRV-01', recovery:'Full',   edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'Backup concluído com sucesso',                   dataExecucao:'2025-03-03T08:15:00' },
-  { bancoNome:'Northwind',      clienteNome:'Beta Comércio SA',    clienteCNPJ:'22.333.444/0001-55', tipoBackup:'Erro',   tamanhoDadosGB:2.104, tamanhoLogGB:1.050, servidor:'SRV-02', recovery:'Simple', edicao:'Express',  percentualExpress:21.0, statusLimite:'Dentro do limite',     status:'Falha na conexão com servidor de destino',        dataExecucao:'2025-03-03T07:45:00' },
-  { bancoNome:'ContasDB',       clienteNome:'Gama Serviços ME',    clienteCNPJ:'33.444.555/0001-66', tipoBackup:'Alerta', tamanhoDadosGB:8.990, tamanhoLogGB:0.880, servidor:'SRV-01', recovery:'Full',   edicao:'Express',  percentualExpress:89.9, statusLimite:'⚠️ Próximo do limite', status:'Banco Express acima de 80% do limite de 10 GB',   dataExecucao:'2025-03-03T09:00:00' },
-  { bancoNome:'VendasProd',     clienteNome:'Delta Indústria SA',  clienteCNPJ:'44.555.666/0001-77', tipoBackup:'OK',     tamanhoDadosGB:1.230, tamanhoLogGB:0.100, servidor:'SRV-03', recovery:'Full',   edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'Backup incremental OK',                          dataExecucao:'2025-03-03T06:30:00' },
-  { bancoNome:'RHSistema',      clienteNome:'Épsilon Tech EIRELI', clienteCNPJ:'55.666.777/0001-88', tipoBackup:'OK',     tamanhoDadosGB:0.540, tamanhoLogGB:0.040, servidor:'SRV-02', recovery:'Simple', edicao:'Standard', percentualExpress:0,    statusLimite:'Dentro do limite',     status:'OK',                                             dataExecucao:'2025-03-03T08:00:00' },
-  { bancoNome:'LogisticaDB',    clienteNome:'Zeta Transportes',    clienteCNPJ:'66.777.888/0001-99', tipoBackup:'Erro',   tamanhoDadosGB:3.670, tamanhoLogGB:0.210, servidor:'SRV-03', recovery:'Full',   edicao:'Express',  percentualExpress:36.7, statusLimite:'Dentro do limite',     status:'Timeout durante compressão do arquivo',          dataExecucao:'2025-03-02T23:55:00' },
-];
-
-const MOCK_HISTORICO = (function() {
-  const lista = [];
-  const tipos = ['OK','OK','OK','OK','Alerta','Erro'];
-  const ciclos = ['FULL','DIFF','LOG'];
-  const ref = new Date('2025-03-03T10:00:00');
-  for (let i = 0; i < 200; i++) {
-    const base = MOCK_RESUMO[i % MOCK_RESUMO.length];
-    const dt   = new Date(ref - i * 1000 * 3600 * 4);
-    const tipo = tipos[i % tipos.length];
-    lista.push({
-      ...base,
-      tipoBackup: tipo,
-      ciclo: ciclos[i % 3],
-      nomeArquivo: base.bancoNome + '_' + dt.toISOString().slice(0,10) + '_' + ciclos[i%3] + '.bak',
-      dataExecucao: dt.toISOString(),
-      status: tipo==='Erro' ? 'Falha no processo de backup' : tipo==='Alerta' ? 'Banco acima de 80% do limite' : 'Backup concluído com sucesso',
-    });
-  }
-  return lista;
-})();
-
-const MOCK_TAMANHO = (function() {
-  const m = {};
-  const ref = new Date('2025-03-03T10:00:00');
-  MOCK_RESUMO.forEach(b => {
-    m[b.bancoNome] = Array.from({length:90}, (_,i) => {
-      const d = new Date(ref - (89-i)*86400000);
-      return {
-        hora: d.toISOString(),
-        dados_gb: +(b.tamanhoDadosGB + (Math.random()-.5)*.4).toFixed(3),
-        log_gb:   +(b.tamanhoLogGB   + (Math.random()-.5)*.05).toFixed(3),
-      };
-    });
-  });
-  return m;
-})();
-
-// ── ESTADO ────────────────────────────────────────────────────
-let chart          = null;
-let todosResumo    = [];
-let todosHistorico = [];
-let cardSelecionado = null; // { bancoNome, clienteCNPJ, clienteNome }
-
-// ── UTIL ──────────────────────────────────────────────────────
-const norm = s => (s||'').toLowerCase().replace(/[\.\-\/\s]/g,'');
+// ── Formatadores ──────────────────────────────────────────────
 const fmt = {
-  ts: v => v ? new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—',
-  n:  (v,d=3) => v!=null ? Number(v).toFixed(d) : '—',
-  date: d => d.toISOString().slice(0,10),
+  ts: v => {
+    if (!v) return '—';
+    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  },
+  n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
   badge: t => {
-    const k=(t||'').toLowerCase();
-    const c=k==='ok'?'ok':k==='erro'?'erro':'alerta';
-    return `<span class="badge ${c}">${{ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'}[c]??t}</span>`;
+    const k = (t||'').toLowerCase();
+    const c = k==='ok'?'ok':k==='erro'?'erro':'alerta';
+    const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
+    return `<span class="badge ${c}">${l[c]??t}</span>`;
   },
   cardCls: t => { const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta'; },
   exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
+  date: d => d.toISOString().slice(0,10),
 };
 
-// ── SELEÇÃO DE CARD ───────────────────────────────────────────
-function selecionarCard(bancoNome, clienteNome, clienteCNPJ) {
-  // Toggle: clica no mesmo → deseleciona
-  if (cardSelecionado && cardSelecionado.bancoNome === bancoNome && cardSelecionado.clienteCNPJ === clienteCNPJ) {
-    desselecionarCard();
-    return;
-  }
+// ── Estado ───────────────────────────────────────────────────
+let chart = null;
+let todosResumo = [];    // todos os cards originais
+let todosHistorico = []; // todos os eventos originais
+let clienteAtual = null;
 
-  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
-
-  // Banner
-  document.getElementById('bannerLabel').textContent = clienteNome;
-  document.getElementById('bannerChips').innerHTML =
-    `<span class="filter-chip">🗄 ${bancoNome}</span><span class="filter-chip">📄 ${clienteCNPJ}</span>`;
-  document.getElementById('filterBanner').classList.add('visible');
-
-  // Highlight borda
-  document.getElementById('chartContainer').classList.add('hl');
-  document.getElementById('tableContainer').classList.add('hl');
-
-  // Seleciona banco no select do gráfico
-  const sg = document.getElementById('selectBancoGrafico');
-  for (let i=0;i<sg.options.length;i++) { if (sg.options[i].value===bancoNome){sg.selectedIndex=i;break;} }
-
-  renderGrafico();
-  aplicarFiltros(); // também redesenha os cards com dimmed/selected
-
-  // Scroll suave
-  setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 80);
-}
-
-function desselecionarCard() {
-  cardSelecionado = null;
-  document.getElementById('filterBanner').classList.remove('visible');
-  document.getElementById('chartContainer').classList.remove('hl');
-  document.getElementById('tableContainer').classList.remove('hl');
-  document.getElementById('selectBancoGrafico').selectedIndex = 0;
-  renderGrafico();
-  aplicarFiltros();
-}
-
-// ── FILTROS ───────────────────────────────────────────────────
+// ── Filtros globais ───────────────────────────────────────────
 function setPeriodo(p) {
-  const h = new Date(); let de, ate;
-  if (p==='hoje') { de=ate=fmt.date(h); }
-  else if (p==='mes') { de=fmt.date(new Date(h.getFullYear(),h.getMonth(),1)); ate=fmt.date(h); }
-  else { de=fmt.date(new Date(h.getFullYear(),h.getMonth()-1,1)); ate=fmt.date(new Date(h.getFullYear(),h.getMonth(),0)); }
-  document.getElementById('fDe').value=de; document.getElementById('fAte').value=ate;
-  document.querySelectorAll('.period-btns button').forEach(b=>b.classList.remove('active'));
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') {
+    de = ate = fmt.date(hoje);
+  } else if (p === 'mes') {
+    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+    ate = fmt.date(hoje);
+  } else { // mesant
+    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1));
+    ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
+  }
+  document.getElementById('fDe').value  = de;
+  document.getElementById('fAte').value = ate;
+  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
   document.getElementById(p==='hoje'?'btnHoje':p==='mes'?'btnMes':'btnMesAnt').classList.add('active');
-  aplicarFiltros();
+  aplicarFiltroCliente();
 }
-function limparPeriodoBtns() { document.querySelectorAll('.period-btns button').forEach(b=>b.classList.remove('active')); }
+
+function limparPeriodoBtns() {
+  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
+}
+
 function limparFiltros() {
-  document.getElementById('fCliente').value='';
-  document.getElementById('fDe').value='';
-  document.getElementById('fAte').value='';
+  document.getElementById('fCliente').value = '';
+  document.getElementById('fDe').value = '';
+  document.getElementById('fAte').value = '';
   limparPeriodoBtns();
-  desselecionarCard();
+  aplicarFiltroCliente();
 }
 
-// ── FILTRO CENTRAL ────────────────────────────────────────────
-function aplicarFiltros() {
-  const cli   = norm(document.getElementById('fCliente').value);
-  const de    = document.getElementById('fDe').value;
-  const ate   = document.getElementById('fAte').value;
-  const tipo  = (document.getElementById('filtroTipo').value||'').toLowerCase();
-  const banco = document.getElementById('filtroBanco').value;
-  const limit = parseInt(document.getElementById('filtroLimit').value)||100;
+function norm(s) { return (s||'').toLowerCase().replace(/[.\-\/\s]/g,''); }
 
-  // Filtra cards (sem cardSelecionado influir — sempre mostra todos com estilo)
+function aplicarFiltroCliente() {
+  const cli = norm(document.getElementById('fCliente').value);
+  const de  = document.getElementById('fDe').value;
+  const ate = document.getElementById('fAte').value;
+
+  // Filtra cards
   const cardsFiltrados = todosResumo.filter(r => {
     if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
-    if (de && new Date(r.dataExecucao) < new Date(de+'T00:00:00')) return false;
-    if (ate && new Date(r.dataExecucao) > new Date(ate+'T23:59:59')) return false;
+    if (de || ate) {
+      const dt = new Date(r.dataExecucao);
+      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    }
     return true;
   });
   renderCards(cardsFiltrados);
 
   // Filtra histórico
   const histFiltrado = todosHistorico.filter(r => {
-    // Se card selecionado: filtra exato por banco + CNPJ
-    if (cardSelecionado) {
-      if (norm(r.bancoNome) !== norm(cardSelecionado.bancoNome)) return false;
-      if (norm(r.clienteCNPJ) !== norm(cardSelecionado.clienteCNPJ)) return false;
-    } else {
-      if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
-      if (banco && norm(r.bancoNome) !== norm(banco)) return false;
+    if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+    if (de || ate) {
+      const dt = new Date(r.dataExecucao);
+      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
     }
-    if (tipo && (r.tipoBackup||'').toLowerCase() !== tipo) return false;
-    if (de && new Date(r.dataExecucao) < new Date(de+'T00:00:00')) return false;
-    if (ate && new Date(r.dataExecucao) > new Date(ate+'T23:59:59')) return false;
     return true;
   });
-
-  renderHistorico(histFiltrado.slice(0, limit));
+  renderHistorico(histFiltrado);
 }
 
-// ── RENDER CARDS ──────────────────────────────────────────────
+// ── Carregar dados da API ─────────────────────────────────────
+async function carregarBancos() {
+  try {
+    const bancos = await (await fetch('/api/bancos')).json();
+    ['filtroBanco','selectBancoGrafico'].forEach(id => {
+      const sel = document.getElementById(id);
+      const first = sel.options[0];
+      sel.innerHTML = ''; sel.appendChild(first);
+      bancos.forEach(b => { const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function carregarResumo() {
+  const el = document.getElementById('cardsContainer');
+  try {
+    todosResumo = await (await fetch('/api/resumo')).json();
+    aplicarFiltroCliente();
+  } catch(e) {
+    el.innerHTML=`<div class="loader" style="color:var(--erro)">Erro ao carregar resumo.</div>`;
+  }
+}
+
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
   el.innerHTML = rows.map(r => {
-    const cls    = fmt.cardCls(r.tipoBackup);
-    const isEx   = (r.edicao||'').toLowerCase().includes('express');
-    const pct    = Number(r.percentualExpress||0);
-    const fc     = fmt.exprColor(pct);
-    const isSel  = cardSelecionado && norm(r.bancoNome)===norm(cardSelecionado.bancoNome) && norm(r.clienteCNPJ)===norm(cardSelecionado.clienteCNPJ);
-    const isDim  = cardSelecionado && !isSel;
-
-    // Usando atributos data-* para evitar escaping de aspas no onclick
-    return `<div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
-      data-banco="${r.bancoNome}" data-nome="${r.clienteNome}" data-doc="${r.clienteCNPJ}"
-      onclick="onCardClick(this)">
-      <div class="card-header">
-        <div class="card-banco">${r.bancoNome??'—'}</div>
-        ${fmt.badge(r.tipoBackup)}
-      </div>
-      <div class="card-cliente">${r.clienteNome??'—'}</div>
-      <div class="card-doc">${r.clienteCNPJ??''}</div>
-      <div class="card-metrics">
-        <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
-        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
-        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
-        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
-      </div>
-      ${isEx ? `
-      <div class="express-bar">
-        <div class="express-bar-label">
-          <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
-          <span style="color:${fc}">${r.statusLimite??''}</span>
+    const cls  = fmt.cardCls(r.tipoBackup);
+    const isEx = (r.edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||0);
+    const fc   = fmt.exprColor(pct);
+    return `
+      <div class="card ${cls}" onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
+        <div class="card-header">
+          <div class="card-banco">${r.bancoNome??'—'}</div>
+          ${fmt.badge(r.tipoBackup)}
         </div>
-        <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-      </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
-      <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
-      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
-      <div class="card-hint">▼ clique para filtrar</div>
-    </div>`;
+        <div class="card-cliente">${r.clienteNome??'—'}</div>
+        <div class="card-doc">${r.clienteCNPJ??''}</div>
+        <div class="card-metrics">
+          <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
+          <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
+          <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
+          <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
+        </div>
+        ${isEx ? `
+        <div class="express-bar">
+          <div class="express-bar-label">
+            <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
+            <span style="color:${fc}">${r.statusLimite??''}</span>
+          </div>
+          <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
+        </div>` : `<div class="card-doc" style="margin-top:8px">${r.statusLimite??''}</div>`}
+        <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
+        <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
+      </div>`;
   }).join('');
 }
 
-// Lê data-* do elemento clicado — sem problemas de encoding de aspas
-function onCardClick(el) {
-  selecionarCard(el.dataset.banco, el.dataset.nome, el.dataset.doc);
-}
-
-// ── RENDER GRÁFICO ────────────────────────────────────────────
-function renderGrafico() {
-  const bancoSel = cardSelecionado ? cardSelecionado.bancoNome : document.getElementById('selectBancoGrafico').value;
-  const dias = parseInt(document.getElementById('selectDias').value)||30;
-  let rows = [];
-
-  if (bancoSel && MOCK_TAMANHO[bancoSel]) {
-    rows = MOCK_TAMANHO[bancoSel].slice(-dias);
-  } else {
-    const keys = Object.keys(MOCK_TAMANHO);
-    const len  = MOCK_TAMANHO[keys[0]]?.length ?? 0;
-    for (let i = Math.max(0,len-dias); i < len; i++) {
-      let dados=0, log=0;
-      keys.forEach(k=>{ dados+=+(MOCK_TAMANHO[k][i]?.dados_gb||0); log+=+(MOCK_TAMANHO[k][i]?.log_gb||0); });
-      rows.push({ hora:MOCK_TAMANHO[keys[0]][i].hora, dados_gb:+dados.toFixed(3), log_gb:+log.toFixed(3) });
-    }
-  }
-
-  const labels  = rows.map(r => fmt.ts(r.hora).slice(0,10));
-  const dadosGb = rows.map(r => +r.dados_gb);
-  const logGb   = rows.map(r => +r.log_gb);
-  const ctx = document.getElementById('chartTamanho').getContext('2d');
-  if (chart) chart.destroy();
-  chart = new Chart(ctx,{
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
-      { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
-    ]},
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}},
-      scales:{
-        x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
-        y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
+async function carregarGrafico() {
+  const banco = document.getElementById('selectBancoGrafico').value;
+  const dias  = document.getElementById('selectDias').value;
+  try {
+    const url  = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+    const rows = await (await fetch(url)).json();
+    const labels  = rows.map(r => fmt.ts(r.hora).slice(0,16));
+    const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
+    const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
+    const ctx = document.getElementById('chartTamanho').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
+          { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,
+            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}
+        },
+        scales:{
+          x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
+          y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
+        }
       }
-    }
-  });
+    });
+  } catch(e) { console.error('Gráfico:', e); }
 }
 
-// ── RENDER HISTÓRICO ──────────────────────────────────────────
+async function carregarHistorico() {
+  const tipo  = document.getElementById('filtroTipo').value;
+  const banco = document.getElementById('filtroBanco').value;
+  const limit = document.getElementById('filtroLimit').value;
+  document.getElementById('tabelaHistorico').innerHTML=
+    `<tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
+  try {
+    let url = `/api/historico?limit=${limit}`;
+    if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
+    if (banco) url += `&banco=${encodeURIComponent(banco)}`;
+    todosHistorico = await (await fetch(url)).json();
+    aplicarFiltroCliente();
+  } catch(e) {
+    document.getElementById('tabelaHistorico').innerHTML=
+      `<tr><td colspan="12" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+  }
+}
+
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
   if (!rows.length) { tbody.innerHTML=`<tr><td colspan="12" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
   tbody.innerHTML = rows.map(r => {
-    const isEx=(r.edicao||'').toLowerCase().includes('express');
-    const pct=Number(r.percentualExpress||0);
-    const pctH=isEx?`<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>`:`<span class="muted">—</span>`;
-    return `<tr>
+    const isEx = (r.edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||0);
+    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
+    return `<tr onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
       <td class="muted">${fmt.ts(r.dataExecucao)}</td>
       <td>${fmt.badge(r.tipoBackup)}</td>
       <td><strong>${r.bancoNome??'—'}</strong></td>
@@ -513,7 +487,8 @@ function renderHistorico(rows) {
       <td class="muted" style="font-size:11px">${r.clienteCNPJ??'—'}</td>
       <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-      <td>${fmt.n(r.tamanhoDadosGB)}</td><td>${fmt.n(r.tamanhoLogGB)}</td>
+      <td>${fmt.n(r.tamanhoDadosGB)}</td>
+      <td>${fmt.n(r.tamanhoLogGB)}</td>
       <td>${pctH}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${r.statusLimite??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
@@ -521,25 +496,99 @@ function renderHistorico(rows) {
   }).join('');
 }
 
-// ── POPULA SELECTS ────────────────────────────────────────────
-function popularSelects() {
-  const bancos = [...new Set(MOCK_RESUMO.map(r=>r.bancoNome))].sort();
-  ['filtroBanco','selectBancoGrafico'].forEach(id => {
-    const sel = document.getElementById(id);
-    const first = sel.options[0]; sel.innerHTML=''; sel.appendChild(first);
-    bancos.forEach(b=>{ const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
-  });
+// ── Modal detalhe cliente ─────────────────────────────────────
+function abrirCliente(nome, doc) {
+  clienteAtual = { nome, doc };
+  document.getElementById('modalTitulo').textContent = nome || 'Cliente';
+  document.getElementById('modalChips').innerHTML =
+    `<div class="chip">👤 <b>${nome||'—'}</b></div>
+     <div class="chip">📄 <b>${doc||'—'}</b></div>`;
+  setModalPeriodo('semana');
+  document.getElementById('overlay').classList.add('open');
 }
 
-// ── INIT ──────────────────────────────────────────────────────
-function carregarTudo() {
+function fecharModal() { document.getElementById('overlay').classList.remove('open'); clienteAtual=null; }
+function fecharOverlay(e) { if(e.target===document.getElementById('overlay')) fecharModal(); }
+
+function setModalPeriodo(p) {
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') {
+    de = ate = fmt.date(hoje);
+  } else if (p === 'semana') {
+    const dow = hoje.getDay();
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - (dow===0?6:dow-1));
+    de  = fmt.date(seg);
+    ate = fmt.date(hoje);
+  } else {
+    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+    ate = fmt.date(hoje);
+  }
+  document.getElementById('mDe').value  = de;
+  document.getElementById('mAte').value = ate;
+  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(p==='hoje'?'mBtnHoje':p==='semana'?'mBtnSemana':'mBtnMes').classList.add('active');
+  renderModalTabela();
+}
+
+function limparModalBtns() {
+  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
+}
+
+function renderModalTabela() {
+  if (!clienteAtual) return;
+  const {nome, doc} = clienteAtual;
+  const de  = document.getElementById('mDe').value;
+  const ate = document.getElementById('mAte').value;
+
+  const regs = todosHistorico.filter(r => {
+    const nomeOk = norm(r.clienteNome) === norm(nome);
+    const docOk  = norm(r.clienteCNPJ) === norm(doc);
+    if (!nomeOk && !docOk) return false;
+    const dt = new Date(r.dataExecucao);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    return true;
+  }).sort((a,b) => new Date(b.dataExecucao)-new Date(a.dataExecucao));
+
+  const total   = regs.length;
+  const okN     = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='ok').length;
+  const erroN   = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='erro').length;
+  const alertaN = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='alerta').length;
+
+  document.getElementById('modalStats').innerHTML = `
+    <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--erro)">${erroN}</div><div class="stat-l">Erros</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--alerta)">${alertaN}</div><div class="stat-l">Alertas</div></div>`;
+
+  const tbody = document.getElementById('modalTbody');
+  if (!regs.length) {
+    tbody.innerHTML='<tr><td colspan="8" class="loader">Nenhum registro neste período.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = regs.map(r => {
+    const isEx = (r.edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||0);
+    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : '—';
+    return `<tr>
+      <td class="muted">${fmt.ts(r.dataExecucao)}</td>
+      <td>${fmt.badge(r.tipoBackup)}</td>
+      <td><strong>${r.bancoNome??'—'}</strong></td>
+      <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
+      <td>${fmt.n(r.tamanhoDadosGB)}</td>
+      <td>${pctH}</td>
+      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Carregar tudo ─────────────────────────────────────────────
+async function carregarTudo() {
   document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
-  // Em produção: todosResumo = await fetch('/api/resumo').then(r=>r.json()); etc.
-  todosResumo    = MOCK_RESUMO;
-  todosHistorico = MOCK_HISTORICO;
-  popularSelects();
-  aplicarFiltros();
-  renderGrafico();
+  await carregarBancos();
+  await Promise.all([carregarResumo(), carregarGrafico(), carregarHistorico()]);
 }
 
 carregarTudo();
