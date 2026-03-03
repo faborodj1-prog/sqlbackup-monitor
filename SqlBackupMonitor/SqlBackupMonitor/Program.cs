@@ -6,15 +6,32 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+
 var app = builder.Build();
 app.UseCors();
 app.UseStaticFiles(); // serve wwwroot/index.html
 
 // ── Configuração ──────────────────────────────────────────────────────────────
 // Render: configure as env vars DATABASE_URL e API_KEY no painel Environment
-var connStr = Environment.GetEnvironmentVariable("DATABASE_URL")
-           ?? app.Configuration.GetConnectionString("DefaultConnection")
-           ?? throw new Exception("DATABASE_URL não configurada.");
+var rawUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+          ?? app.Configuration.GetConnectionString("DefaultConnection")
+          ?? throw new Exception("DATABASE_URL nao configurada.");
+
+var connStr = ConvertUrl(rawUrl);
+
+static string ConvertUrl(string url)
+{
+    if (!url.StartsWith("postgresql://") && !url.StartsWith("postgres://"))
+        return url;
+    var uri    = new Uri(url);
+    var info   = uri.UserInfo.Split(':', 2);
+    var user   = Uri.UnescapeDataString(info[0]);
+    var pass   = info.Length > 1 ? Uri.UnescapeDataString(info[1]) : "";
+    var host   = uri.Host;
+    var dbPort = uri.Port > 0 ? uri.Port : 5432;
+    var db     = uri.AbsolutePath.TrimStart('/');
+    return $"Host={host};Port={dbPort};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
+}
 
 var apiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "dev-key-local";
 
