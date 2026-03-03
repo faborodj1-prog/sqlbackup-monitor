@@ -57,8 +57,12 @@
   .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
 
   .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s; cursor:pointer; }
+
+  /* ── Card selecionado ── */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .2s; cursor:pointer; }
   .card:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
+  .card.dimmed { opacity:.4; }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
   .card.ok::before     { background:var(--ok); }
   .card.erro::before   { background:var(--erro); }
@@ -83,6 +87,18 @@
   .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
   .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
+  /* ── Filtro ativo banner ── */
+  .active-filter-banner {
+    display:none; align-items:center; justify-content:space-between;
+    background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.3);
+    border-radius:6px; padding:10px 16px; font-size:12px; gap:12px;
+  }
+  .active-filter-banner.visible { display:flex; }
+  .active-filter-banner span { color:var(--accent); }
+  .active-filter-banner strong { color:var(--text); }
+  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.4); color:var(--accent); font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .btn-deselect:hover { background:rgba(59,130,246,.15); }
+
   .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; }
   .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
   .chart-canvas-wrap { position:relative; height:240px; }
@@ -106,32 +122,7 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
-  /* ── Modal detalhe cliente ── */
-  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
-  .overlay.open { display:flex; }
-  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(900px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
-  .modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
-  .modal-header h2 { font-family:var(--ui); font-size:15px; font-weight:800; }
-  .modal-close { background:transparent; border:1px solid var(--border2); color:var(--muted); width:30px; height:30px; border-radius:4px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-  .modal-close:hover { border-color:var(--erro); color:var(--erro); }
-  .modal-body { padding:18px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px; }
-  .modal-chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .chip { background:var(--bg); border:1px solid var(--border2); border-radius:4px; padding:4px 12px; font-size:11px; color:var(--muted); }
-  .chip b { color:var(--text); }
-  .modal-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-  .stat { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px 16px; text-align:center; }
-  .stat-v { font-family:var(--ui); font-size:24px; font-weight:800; }
-  .stat-l { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1px; text-transform:uppercase; }
-  .modal-period { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .modal-period label { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
-  .modal-period input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:4px; height:28px; outline:none; color-scheme:dark; }
-  .modal-period input:focus { border-color:var(--accent); }
-  .modal-period button { height:28px; padding:0 10px; background:var(--bg); border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
-  .modal-period button:hover { border-color:var(--accent); color:var(--accent); }
-  .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-
-  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent); }
-  .card.selected::after { content:'✕ clique para limpar'; position:absolute; bottom:8px; right:10px; font-size:9px; color:var(--accent); opacity:.7; }
+  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} }
 </style>
 </head>
 <body>
@@ -174,11 +165,16 @@
   <!-- CARDS STATUS -->
   <section>
     <div class="section-title">Status Atual por Banco</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;margin-top:-8px">💡 Clique em um card para filtrar todos os dados do cliente</div>
-  <div class="cards-grid" id="cardsContainer">
+    <div class="cards-grid" id="cardsContainer">
       <div class="loader"><div class="spin"></div> Carregando...</div>
     </div>
   </section>
+
+  <!-- BANNER FILTRO ATIVO -->
+  <div class="active-filter-banner" id="activeFilterBanner">
+    <span>🔍 Filtrando por: <strong id="activeFilterLabel">—</strong></span>
+    <button class="btn-deselect" onclick="desselecionarCard()">✕ Limpar seleção</button>
+  </div>
 
   <!-- GRÁFICO -->
   <section>
@@ -240,37 +236,6 @@
   </section>
 </main>
 
-<!-- MODAL DETALHE CLIENTE -->
-<div class="overlay" id="overlay" onclick="fecharOverlay(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="modalTitulo">Detalhe do Cliente</h2>
-      <button class="modal-close" onclick="fecharModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-chips" id="modalChips"></div>
-      <div class="modal-stats" id="modalStats"></div>
-      <div class="modal-period">
-        <label>Período:</label>
-        <input type="date" id="mDe"  onchange="limparModalBtns();renderModalTabela()"/>
-        <input type="date" id="mAte" onchange="limparModalBtns();renderModalTabela()"/>
-        <button id="mBtnHoje"   onclick="setModalPeriodo('hoje')">Hoje</button>
-        <button id="mBtnSemana" onclick="setModalPeriodo('semana')" class="active">Esta semana</button>
-        <button id="mBtnMes"    onclick="setModalPeriodo('mes')">Este mês</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead><tr>
-            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Ciclo</th>
-            <th>Arquivo</th><th>Dados GB</th><th>Express %</th><th>Status</th>
-          </tr></thead>
-          <tbody id="modalTbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 // ── Formatadores ──────────────────────────────────────────────
 const fmt = {
@@ -292,9 +257,76 @@ const fmt = {
 
 // ── Estado ───────────────────────────────────────────────────
 let chart = null;
-let todosResumo = [];    // todos os cards originais
-let todosHistorico = []; // todos os eventos originais
-let clienteAtual = null;
+let todosResumo    = [];
+let todosHistorico = [];
+
+// Card selecionado: { bancoNome, clienteNome, clienteCNPJ } | null
+let cardSelecionado = null;
+
+// ── Seleção de card ───────────────────────────────────────────
+function selecionarCard(bancoNome, clienteNome, clienteCNPJ) {
+  // Toggle: clicando no mesmo card deseleciona
+  if (
+    cardSelecionado &&
+    cardSelecionado.bancoNome === bancoNome &&
+    cardSelecionado.clienteCNPJ === clienteCNPJ
+  ) {
+    desselecionarCard();
+    return;
+  }
+
+  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
+
+  // Visual dos cards
+  document.querySelectorAll('#cardsContainer .card').forEach(el => {
+    const isSelected = el.dataset.banco === bancoNome && el.dataset.doc === clienteCNPJ;
+    el.classList.toggle('selected', isSelected);
+    el.classList.toggle('dimmed', !isSelected);
+  });
+
+  // Banner
+  const banner = document.getElementById('activeFilterBanner');
+  const label  = document.getElementById('activeFilterLabel');
+  label.textContent = `${bancoNome} — ${clienteNome}`;
+  banner.classList.add('visible');
+
+  // Atualiza gráfico: seleciona o banco no select e recarrega
+  const sel = document.getElementById('selectBancoGrafico');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === bancoNome) { sel.selectedIndex = i; break; }
+  }
+  carregarGrafico();
+
+  // Atualiza histórico: seleciona o banco no select e recarrega
+  const selH = document.getElementById('filtroBanco');
+  for (let i = 0; i < selH.options.length; i++) {
+    if (selH.options[i].value === bancoNome) { selH.selectedIndex = i; break; }
+  }
+
+  // Renderiza histórico filtrado pelo banco + cliente
+  aplicarFiltroComCard();
+
+  // Scroll suave até o gráfico
+  document.querySelector('.chart-container')
+    .scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function desselecionarCard() {
+  cardSelecionado = null;
+
+  document.querySelectorAll('#cardsContainer .card').forEach(el => {
+    el.classList.remove('selected', 'dimmed');
+  });
+
+  document.getElementById('activeFilterBanner').classList.remove('visible');
+
+  // Reseta selects
+  document.getElementById('selectBancoGrafico').selectedIndex = 0;
+  document.getElementById('filtroBanco').selectedIndex = 0;
+
+  carregarGrafico();
+  aplicarFiltroCliente();
+}
 
 // ── Filtros globais ───────────────────────────────────────────
 function setPeriodo(p) {
@@ -305,7 +337,7 @@ function setPeriodo(p) {
   } else if (p === 'mes') {
     de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
     ate = fmt.date(hoje);
-  } else { // mesant
+  } else {
     de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1));
     ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
   }
@@ -325,17 +357,19 @@ function limparFiltros() {
   document.getElementById('fDe').value = '';
   document.getElementById('fAte').value = '';
   limparPeriodoBtns();
-  aplicarFiltroCliente();
+  desselecionarCard();
 }
 
 function norm(s) { return (s||'').toLowerCase().replace(/[.\-\/\s]/g,''); }
 
+// Filtro global (sem seleção de card)
 function aplicarFiltroCliente() {
+  if (cardSelecionado) { aplicarFiltroComCard(); return; }
+
   const cli = norm(document.getElementById('fCliente').value);
   const de  = document.getElementById('fDe').value;
   const ate = document.getElementById('fAte').value;
 
-  // Filtra cards
   const cardsFiltrados = todosResumo.filter(r => {
     if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
     if (de || ate) {
@@ -347,9 +381,29 @@ function aplicarFiltroCliente() {
   });
   renderCards(cardsFiltrados);
 
-  // Filtra histórico
   const histFiltrado = todosHistorico.filter(r => {
     if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+    if (de || ate) {
+      const dt = new Date(r.dataExecucao);
+      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+  renderHistorico(histFiltrado);
+}
+
+// Filtro com card selecionado: combina filtro global + banco + cliente
+function aplicarFiltroComCard() {
+  if (!cardSelecionado) { aplicarFiltroCliente(); return; }
+
+  const { bancoNome, clienteCNPJ } = cardSelecionado;
+  const de  = document.getElementById('fDe').value;
+  const ate = document.getElementById('fAte').value;
+
+  const histFiltrado = todosHistorico.filter(r => {
+    if (norm(r.bancoNome) !== norm(bancoNome)) return false;
+    if (norm(r.clienteCNPJ) !== norm(clienteCNPJ)) return false;
     if (de || ate) {
       const dt = new Date(r.dataExecucao);
       if (de  && dt < new Date(de  + 'T00:00:00')) return false;
@@ -391,8 +445,18 @@ function renderCards(rows) {
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
+
+    // Identifica se este card está selecionado
+    const isSel = cardSelecionado &&
+      norm(r.bancoNome) === norm(cardSelecionado.bancoNome) &&
+      norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
+    const isDimmed = cardSelecionado && !isSel;
+
     return `
-      <div class="card ${cls}${document.getElementById('fCliente').value===r.clienteNome?' selected':''}" onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
+      <div class="card ${cls}${isSel?' selected':''}${isDimmed?' dimmed':''}"
+           data-banco="${r.bancoNome??''}"
+           data-doc="${r.clienteCNPJ??''}"
+           onclick="selecionarCard(${JSON.stringify(r.bancoNome)},${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
         <div class="card-header">
           <div class="card-banco">${r.bancoNome??'—'}</div>
           ${fmt.badge(r.tipoBackup)}
@@ -467,7 +531,8 @@ async function carregarHistorico() {
     if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
     if (banco) url += `&banco=${encodeURIComponent(banco)}`;
     todosHistorico = await (await fetch(url)).json();
-    aplicarFiltroCliente();
+    if (cardSelecionado) aplicarFiltroComCard();
+    else aplicarFiltroCliente();
   } catch(e) {
     document.getElementById('tabelaHistorico').innerHTML=
       `<tr><td colspan="12" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
@@ -481,7 +546,7 @@ function renderHistorico(rows) {
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
-    return `<tr onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
+    return `<tr>
       <td class="muted">${fmt.ts(r.dataExecucao)}</td>
       <td>${fmt.badge(r.tipoBackup)}</td>
       <td><strong>${r.bancoNome??'—'}</strong></td>
@@ -494,99 +559,6 @@ function renderHistorico(rows) {
       <td>${pctH}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${r.statusLimite??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Modal detalhe cliente ─────────────────────────────────────
-function abrirCliente(nome, doc) {
-  // Se clicar no mesmo card já selecionado, limpa o filtro
-  const fCliente = document.getElementById('fCliente');
-  if (fCliente.value === nome) {
-    limparFiltros();
-    return;
-  }
-  // Preenche o campo cliente com o nome e aplica filtro
-  fCliente.value = nome || doc || '';
-  limparPeriodoBtns();
-  aplicarFiltroCliente();
-  // Scroll suave até o histórico
-  document.querySelector('section:last-child').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function fecharModal() { document.getElementById('overlay').classList.remove('open'); clienteAtual=null; }
-function fecharOverlay(e) { if(e.target===document.getElementById('overlay')) fecharModal(); }
-
-function setModalPeriodo(p) {
-  const hoje = new Date();
-  let de, ate;
-  if (p === 'hoje') {
-    de = ate = fmt.date(hoje);
-  } else if (p === 'semana') {
-    const dow = hoje.getDay();
-    const seg = new Date(hoje); seg.setDate(hoje.getDate() - (dow===0?6:dow-1));
-    de  = fmt.date(seg);
-    ate = fmt.date(hoje);
-  } else {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
-    ate = fmt.date(hoje);
-  }
-  document.getElementById('mDe').value  = de;
-  document.getElementById('mAte').value = ate;
-  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
-  document.getElementById(p==='hoje'?'mBtnHoje':p==='semana'?'mBtnSemana':'mBtnMes').classList.add('active');
-  renderModalTabela();
-}
-
-function limparModalBtns() {
-  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
-}
-
-function renderModalTabela() {
-  if (!clienteAtual) return;
-  const {nome, doc} = clienteAtual;
-  const de  = document.getElementById('mDe').value;
-  const ate = document.getElementById('mAte').value;
-
-  const regs = todosHistorico.filter(r => {
-    const nomeOk = norm(r.clienteNome) === norm(nome);
-    const docOk  = norm(r.clienteCNPJ) === norm(doc);
-    if (!nomeOk && !docOk) return false;
-    const dt = new Date(r.dataExecucao);
-    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    return true;
-  }).sort((a,b) => new Date(b.dataExecucao)-new Date(a.dataExecucao));
-
-  const total   = regs.length;
-  const okN     = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='ok').length;
-  const erroN   = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='erro').length;
-  const alertaN = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='alerta').length;
-
-  document.getElementById('modalStats').innerHTML = `
-    <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
-    <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
-    <div class="stat"><div class="stat-v" style="color:var(--erro)">${erroN}</div><div class="stat-l">Erros</div></div>
-    <div class="stat"><div class="stat-v" style="color:var(--alerta)">${alertaN}</div><div class="stat-l">Alertas</div></div>`;
-
-  const tbody = document.getElementById('modalTbody');
-  if (!regs.length) {
-    tbody.innerHTML='<tr><td colspan="8" class="loader">Nenhum registro neste período.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = regs.map(r => {
-    const isEx = (r.edicao||'').toLowerCase().includes('express');
-    const pct  = Number(r.percentualExpress||0);
-    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : '—';
-    return `<tr>
-      <td class="muted">${fmt.ts(r.dataExecucao)}</td>
-      <td>${fmt.badge(r.tipoBackup)}</td>
-      <td><strong>${r.bancoNome??'—'}</strong></td>
-      <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
-      <td class="muted" style="font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-      <td>${fmt.n(r.tamanhoDadosGB)}</td>
-      <td>${pctH}</td>
-      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
     </tr>`;
   }).join('');
 }
