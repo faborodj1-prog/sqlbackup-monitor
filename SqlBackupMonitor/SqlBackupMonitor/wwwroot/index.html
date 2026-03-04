@@ -65,9 +65,26 @@
   .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
   .card.dimmed { opacity:.3; filter:saturate(.2); }
   .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-  .card.ok::before     { background:var(--ok); }
-  .card.erro::before   { background:var(--erro); }
-  .card.alerta::before { background:var(--alerta); }
+  .card.ok::before             { background:var(--ok); }
+  .card.erro::before           { background:var(--erro); }
+  .card.alerta::before         { background:var(--alerta); }
+  .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.04); }
+  .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
+  .card-ciclo { display:flex; align-items:center; gap:5px; font-size:9px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--muted); flex-wrap:wrap; }
+  .ciclo-ok   { color:var(--ok); }
+  .ciclo-ok   { color:var(--ok); }
+  .ciclo-late { color:#f97316; font-weight:700; animation:blink 1.4s infinite; }
+  .ciclo-freq { background:rgba(99,102,241,.15); color:var(--accent2); border-radius:3px; padding:1px 6px; font-weight:600; white-space:nowrap; }
+  .ciclo-prox { color:var(--muted); margin-left:2px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  /* Config bar */
+  .config-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:11px 18px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:11px; color:var(--muted); }
+  .config-bar strong { color:var(--text); font-size:11px; }
+  .config-field { display:flex; align-items:center; gap:7px; }
+  .config-field label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; }
+  .config-field input[type=number] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:12px; padding:3px 8px; border-radius:4px; outline:none; width:65px; height:26px; }
+  .config-field input:focus { border-color:var(--accent); }
+  .config-sep { width:1px; height:22px; background:var(--border2); }
 
   .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
   .card-banco { font-family:var(--ui); font-size:13px; font-weight:600; color:var(--muted); }
@@ -88,6 +105,7 @@
   .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
   .card-ts  { font-size:9px; color:var(--muted); margin-top:6px; opacity:.5; }
   .card-msg { font-size:9px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
 
   /* Banner filtro ativo */
   .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px;
@@ -191,6 +209,20 @@
     </div>
   </section>
 
+  <!-- CONFIG CICLO -->
+  <section>
+    <div class="section-title">Configurações de Monitoramento</div>
+    <div class="config-bar">
+      <strong>⚙ Alerta de ciclo</strong>
+      <div class="config-sep"></div>
+      <div class="config-field">
+        <label>Tolerância</label>
+        <input type="number" id="cfgTolerancia" value="30" min="5" max="120" onchange="aplicarFiltroCliente()"/>
+        <span>min após o ciclo</span>
+      </div>
+    </div>
+  </section>
+
   <!-- CARDS STATUS -->
   <section>
     <div class="section-title">Status Atual por Banco</div>
@@ -252,12 +284,12 @@
       <div style="overflow-x:auto;">
         <table>
           <thead><tr>
-            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Cliente</th>
-            <th>Doc</th><th>Ciclo</th><th>Arquivo</th>
-            <th>Dados GB</th><th>Log GB</th><th>Express %</th><th>Limite</th><th>Status</th>
+            <th>Data/Hora</th><th>Tipo</th><th>Cliente</th>
+            <th>Doc</th><th>Freq.</th><th>Próx. Ciclo</th><th>Arquivo</th>
+            <th>Dados GB</th><th>Log GB</th><th>Express %</th><th>Status</th>
           </tr></thead>
           <tbody id="tabelaHistorico">
-            <tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>
+            <tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -313,6 +345,24 @@ const fmt = {
   cardCls: t => { const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta'; },
   exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
   date: d => d.toISOString().slice(0,10),
+  // Retorna HTML do bloco de ciclo para o card
+  cardCiclo: r => {
+    if (!r.proximoCiclo && !r.ciclo) return '';
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    let statusCiclo = '';
+    if (r.proximoCiclo) {
+      const prox = new Date(r.proximoCiclo);
+      const atrasado = new Date() > new Date(prox.getTime() + tolerancia * 60000);
+      statusCiclo = atrasado
+        ? '<span class="ciclo-late">⚠ atrasado</span>'
+        : '<span class="ciclo-ok">✓</span>';
+    }
+    const freqLabel = r.ciclo ? `<span class="ciclo-freq">🔄 ${r.ciclo}</span>` : '';
+    const proxLabel = r.proximoCiclo
+      ? `<span class="ciclo-prox">→ ${fmt.ts(r.proximoCiclo).slice(0,16)}</span>`
+      : '';
+    return `<div class="card-ciclo">${freqLabel}${proxLabel}${statusCiclo}</div>`;
+  },
 };
 
 const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
@@ -472,13 +522,17 @@ function renderCards(rows) {
     (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
 
   el.innerHTML = sorted.map(r => {
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    const cicloAtrasado = r.proximoCiclo
+      ? new Date() > new Date(new Date(r.proximoCiclo).getTime() + tolerancia * 60000)
+      : false;
     const cls  = fmt.cardCls(r.tipoBackup);
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
     const isSel = cardSelecionado && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
     const isDim = cardSelecionado && !isSel;
-    return `<div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
+    return `<div class="card ${cls}${cicloAtrasado?' ciclo-atrasado':''}${isSel?' selected':''}${isDim?' dimmed':''}"
          data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
          onclick="onCardClick(this)">
       <div class="card-header">
@@ -502,6 +556,7 @@ function renderCards(rows) {
         <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
       </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
       <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
+      ${fmt.cardCiclo(r)}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
     </div>`;
   }).join('');
@@ -551,7 +606,7 @@ async function carregarHistorico() {
   // a filtragem por clienteCNPJ é feita em memória por aplicarFiltroCliente()
   const banco = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
   document.getElementById('tabelaHistorico').innerHTML=
-    `<tr><td colspan="12" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
+    `<tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
     let url = `/api/historico?limit=${limit}`;
     if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
@@ -560,30 +615,39 @@ async function carregarHistorico() {
     aplicarFiltroCliente();
   } catch(e) {
     document.getElementById('tabelaHistorico').innerHTML=
-      `<tr><td colspan="12" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+      `<tr><td colspan="11" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
   }
 }
 
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
-  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="12" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="11" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
+  const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
   tbody.innerHTML = rows.map(r => {
-    const isEx = (r.edicao||'').toLowerCase().includes('express');
-    const pct  = Number(r.percentualExpress||0);
-    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
+    const isEx  = (r.edicao||'').toLowerCase().includes('express');
+    const pct   = Number(r.percentualExpress||0);
+    const pctH  = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
+    const cnpjNum = (r.clienteCNPJ||'').replace(/\D/g,'');
+    const docCurto = cnpjNum.length >= 6 ? '…' + cnpjNum.slice(-6) : (r.clienteCNPJ||'—');
+    let proxHtml = '—';
+    if (r.proximoCiclo) {
+      const prox = new Date(r.proximoCiclo);
+      const atrasado = new Date() > new Date(prox.getTime() + tolerancia * 60000);
+      proxHtml = fmt.ts(r.proximoCiclo).slice(0,16)
+        + (atrasado ? ' <span style="color:#f97316;font-weight:700" title="Ciclo atrasado">⚠</span>' : '');
+    }
     return `<tr onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
       <td class="muted">${fmt.ts(r.dataExecucao)}</td>
       <td>${fmt.badge(r.tipoBackup)}</td>
-      <td><strong>${r.bancoNome??'—'}</strong></td>
-      <td class="muted">${r.clienteNome??'—'}</td>
-      <td class="muted" style="font-size:11px">${r.clienteCNPJ??'—'}</td>
+      <td><strong>${r.clienteNome??'—'}</strong></td>
+      <td class="muted" style="font-size:11px" title="${r.clienteCNPJ??''}">${docCurto}</td>
       <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
-      <td class="muted" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
+      <td class="muted" style="font-size:11px;white-space:nowrap">${proxHtml}</td>
+      <td class="muted" style="font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
       <td>${fmt.n(r.tamanhoDadosGB)}</td>
       <td>${fmt.n(r.tamanhoLogGB)}</td>
       <td>${pctH}</td>
-      <td class="muted" style="font-size:11px;white-space:nowrap">${r.statusLimite??'—'}</td>
-      <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -679,6 +743,8 @@ async function carregarTudo() {
 
 carregarTudo();
 setInterval(carregarTudo, 120_000);
+// Reavalia alertas de ciclo a cada minuto sem novo fetch
+setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
 </script>
 </body>
 </html>
