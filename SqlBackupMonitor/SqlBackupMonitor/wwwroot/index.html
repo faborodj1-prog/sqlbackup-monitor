@@ -56,8 +56,11 @@
   .btn-clear { height:30px; padding:0 12px; background:transparent; border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
   .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
 
-  .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .25s; cursor:pointer; user-select:none; }
+  .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; max-height:calc(100vh - 280px); overflow-y:auto; padding-right:4px; }
+  .cards-grid::-webkit-scrollbar { width:4px; }
+  .cards-grid::-webkit-scrollbar-track { background:transparent; }
+  .cards-grid::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 14px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .25s; cursor:pointer; user-select:none; }
   .card:hover { border-color:var(--accent); transform:translateY(-1px); }
   .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
   .card.dimmed { opacity:.3; filter:saturate(.2); }
@@ -73,18 +76,18 @@
   .badge.erro   { background:rgba(239,68,68,.15);  color:var(--erro); }
   .badge.alerta { background:rgba(245,158,11,.15); color:var(--alerta); }
 
-  .card-cliente { font-family:var(--ui); font-size:16px; font-weight:800; color:var(--text); margin-bottom:3px; line-height:1.3; }
-  .card-doc     { font-size:11px; color:var(--accent); font-weight:600; margin-bottom:6px; letter-spacing:.3px; }
-  .card-banco-sub { font-size:10px; color:var(--muted); margin-bottom:10px; opacity:.7; }
-  .card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:10px; border-top:1px solid var(--border); }
-  .metric label { display:block; font-size:10px; color:var(--muted); margin-bottom:2px; }
-  .metric value { font-size:13px; font-weight:600; }
-  .express-bar { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
-  .express-bar-label { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:5px; }
-  .express-track { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .card-cliente { font-family:var(--ui); font-size:13px; font-weight:800; color:var(--text); margin-bottom:2px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-doc     { font-size:10px; color:var(--accent); font-weight:600; margin-bottom:4px; letter-spacing:.3px; }
+  .card-banco-sub { font-size:10px; color:var(--muted); margin-bottom:8px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding-top:8px; border-top:1px solid var(--border); }
+  .metric label { display:block; font-size:9px; color:var(--muted); margin-bottom:1px; text-transform:uppercase; letter-spacing:.5px; }
+  .metric value { font-size:12px; font-weight:600; }
+  .express-bar { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .express-bar-label { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-bottom:4px; }
+  .express-track { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
   .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
-  .card-ts  { font-size:10px; color:var(--muted); margin-top:8px; opacity:.6; }
-  .card-msg { font-size:10px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-ts  { font-size:9px; color:var(--muted); margin-top:6px; opacity:.5; }
+  .card-msg { font-size:9px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
   /* Banner filtro ativo */
   .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px;
@@ -456,8 +459,21 @@ async function carregarResumo() {
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
+
+  // Deduplica por CNPJ — mantém o registro mais recente de cada cliente
+  const porCNPJ = new Map();
+  rows.forEach(r => {
+    const key = norm(r.clienteCNPJ) || norm(r.clienteNome);
+    const atual = porCNPJ.get(key);
+    if (!atual || new Date(r.dataExecucao) > new Date(atual.dataExecucao)) {
+      porCNPJ.set(key, r);
+    }
+  });
+
   // Ordena alfabeticamente pelo nome do cliente
-  const sorted = [...rows].sort((a,b) => (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
+  const sorted = [...porCNPJ.values()].sort((a,b) =>
+    (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
+
   el.innerHTML = sorted.map(r => {
     const cls  = fmt.cardCls(r.tipoBackup);
     const isEx = (r.edicao||'').toLowerCase().includes('express');
@@ -465,33 +481,32 @@ function renderCards(rows) {
     const fc   = fmt.exprColor(pct);
     const isSel = cardSelecionado && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
     const isDim = cardSelecionado && !isSel;
-    return `
-      <div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
-           data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
-           onclick="onCardClick(this)">
-        <div class="card-header">
-          <div class="card-cliente">${r.clienteNome??'—'}</div>
-          ${fmt.badge(r.tipoBackup)}
+    return `<div class="card ${cls}${isSel?' selected':''}${isDim?' dimmed':''}"
+         data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
+         onclick="onCardClick(this)">
+      <div class="card-header">
+        <div class="card-cliente">${r.clienteNome??'—'}</div>
+        ${fmt.badge(r.tipoBackup)}
+      </div>
+      <div class="card-doc">${r.clienteCNPJ??''}</div>
+      <div class="card-banco-sub">🗄 ${r.bancoNome??'—'}</div>
+      <div class="card-metrics">
+        <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
+        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
+        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
+        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
+      </div>
+      ${isEx ? `
+      <div class="express-bar">
+        <div class="express-bar-label">
+          <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
+          <span style="color:${fc}">${r.statusLimite??''}</span>
         </div>
-        <div class="card-doc">${r.clienteCNPJ??''}</div>
-        <div class="card-banco-sub">🗄 ${r.bancoNome??'—'}</div>
-        <div class="card-metrics">
-          <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
-          <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
-          <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
-          <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
-        </div>
-        ${isEx ? `
-        <div class="express-bar">
-          <div class="express-bar-label">
-            <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
-            <span style="color:${fc}">${r.statusLimite??''}</span>
-          </div>
-          <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-        </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
-        <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
-        <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
-      </div>`;
+        <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
+      </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
+      <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
+      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
+    </div>`;
   }).join('');
 }
 
