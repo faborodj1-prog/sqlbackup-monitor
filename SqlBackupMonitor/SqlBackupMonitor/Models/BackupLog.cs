@@ -5,7 +5,7 @@ public class BackupLog
     public int      Id                { get; set; }  // PK — gerado pelo banco
     public DateTime DataExecucao      { get; set; }
     public string   ClienteNome       { get; set; } = "";
-    public string   ClienteCNPJ       { get; set; } = "";  // CPF ou CNPJ, já resolvido no SqlBackup
+    public string   ClienteCNPJ       { get; set; } = "";
     public string   BancoNome         { get; set; } = "";
     public string   TipoBackup        { get; set; } = "";  // OK | Erro | Alerta
     public string   Status            { get; set; } = "";  // mensagem descritiva
@@ -19,4 +19,6 @@ public class BackupLog
     public decimal  TamanhoLogGB      { get; set; }
     public decimal  PercentualExpress { get; set; }
     public string   StatusLimite      { get; set; } = "";
+    public int       IntervalHoras     { get; set; }         // intervalo do ciclo em horas
+    public DateTime? ProximaExecucao   { get; set; }         // Atualizado + IntervalHoras (nullable — campo novo)
 }
