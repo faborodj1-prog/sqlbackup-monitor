@@ -338,7 +338,7 @@ const fmt = {
   n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
   badge: t => {
     const k = (t||'').toLowerCase();
-    const c = k==='ok'?'ok':k==='erro'?'erro':'alerta';
+    const c = k==='ok'?'ok':(k==='erro'||k==='error')?'erro':'alerta';
     const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
     return `<span class="badge ${c}">${l[c]??t}</span>`;
   },
@@ -374,18 +374,18 @@ const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
 // Novo:   { cliente, banco, estado, mensagem, intervalHoras, proximaExecucao, tamanho }
 // Legado: { clienteNome, bancoNome, tipoBackup, status, ciclo, proximoCiclo, tamanhoDadosGB }
 function nr(r) {
+  if (!r || typeof r !== 'object') return { _nome:'—',_doc:'',_banco:'—',_estado:'',_msg:'—',_horas:null,_prox:null,_tam:'—',_dt:null,_key:'' };
   return {
     ...r,
-    _nome:   r.cliente      ?? r.clienteNome ?? '—',
-    _doc:    r.clienteCNPJ  ?? '',           // pode não vir no novo JSON
-    _banco:  r.banco        ?? r.bancoNome   ?? '—',
-    _estado: r.estado       ?? r.tipoBackup  ?? '',
-    _msg:    r.mensagem     ?? r.status      ?? '—',
-    _horas:  r.intervalHoras ?? r.intervalohoras ?? null,
+    _nome:   r.cliente        ?? r.clienteNome  ?? '—',
+    _doc:    r.clienteCNPJ    ?? '',
+    _banco:  r.banco          ?? r.bancoNome     ?? '—',
+    _estado: r.estado         ?? r.tipoBackup    ?? r.alertaCiclo ?? '',
+    _msg:    r.mensagem       ?? r.status        ?? '—',
+    _horas:  r.intervalHoras  ?? r.intervalohoras ?? null,
     _prox:   r.proximaExecucao ?? r.proximoCiclo ?? null,
-    _tam:    r.tamanho      ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
-    _dt:     r.dataExecucao ?? r.proximaExecucao ?? null,
-    // chave única: prefere CNPJ, fallback ao nome normalizado
+    _tam:    r.tamanho        ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
+    _dt:     r.dataExecucao   ?? r.proximaExecucao ?? null,
     _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
   };
 }
@@ -627,18 +627,26 @@ async function carregarGrafico() {
 async function carregarHistorico() {
   const tipo  = document.getElementById('filtroTipo').value;
   const limit = document.getElementById('filtroLimit').value;
-  // Quando há card selecionado, NÃO filtra por banco na API —
-  // a filtragem por clienteCNPJ é feita em memória por aplicarFiltroCliente()
   const banco = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
   document.getElementById('tabelaHistorico').innerHTML=
     `<tr><td colspan="9" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
+    // Tenta endpoint principal; adapta URL conforme sua API
     let url = `/api/historico?limit=${limit}`;
     if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
     if (banco) url += `&banco=${encodeURIComponent(banco)}`;
-    todosHistorico = await (await fetch(url)).json();
+    const resp = await fetch(url);
+    const data = await resp.json();
+    // Aceita tanto array direto quanto { data: [...] } ou { historico: [...] }
+    todosHistorico = Array.isArray(data) ? data
+      : (data.historico ?? data.data ?? data.registros ?? data.items ?? []);
+    if (!Array.isArray(todosHistorico)) todosHistorico = [];
+    // DEBUG — remover após validar
+    console.log('[Monitor] historico recebido:', todosHistorico.length, 'registros');
+    if (todosHistorico.length) console.log('[Monitor] exemplo campo 0:', JSON.stringify(todosHistorico[0]));
     aplicarFiltroCliente();
   } catch(e) {
+    console.error('Histórico:', e);
     document.getElementById('tabelaHistorico').innerHTML=
       `<tr><td colspan="9" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
   }
