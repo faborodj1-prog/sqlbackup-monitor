@@ -359,7 +359,7 @@ const fmt = {
         : '<span class="ciclo-ok">✓</span>';
     }
     const freqLabel = n._horas != null
-      ? `<span class="ciclo-freq">🔄 a cada ${n._horas}h</span>`
+      ? `<span class="ciclo-freq">🔄 a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}</span>`
       : '';
     const proxLabel = n._prox
       ? `<span class="ciclo-prox">→ ${fmt.ts(n._prox).slice(0,16)}</span>`
@@ -382,8 +382,8 @@ function nr(r) {
     _banco:  r.banco          ?? r.bancoNome     ?? '—',
     _estado: r.estado         ?? r.tipoBackup    ?? r.alertaCiclo ?? '',
     _msg:    r.mensagem       ?? r.status        ?? '—',
-    _horas:  r.intervalHoras  ?? r.IntervalHoras  ?? r.intervalohoras ?? null,
-    _prox:   r.proximaExecucao ?? r.ProximaExecucao ?? r.proximoCiclo ?? null,
+    _horas:  (r.intervalHoras > 0 ? r.intervalHoras : (r.intervalohoras > 0 ? r.intervalohoras : null)),
+    _prox:   r.proximaExecucao ?? r.proximoCiclo ?? null,
     _tam:    r.tamanho        ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
     _dt:     r.dataExecucao   ?? r.proximaExecucao ?? null,
     _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
@@ -663,7 +663,7 @@ function renderHistorico(rows) {
     const pctH  = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
     const cnpjNum  = n._doc.replace(/\D/g,'');
     const docCurto = cnpjNum.length >= 6 ? '…' + cnpjNum.slice(-6) : (n._doc||'—');
-    const freqLabel = n._horas != null ? `a cada ${n._horas}h` : (r.ciclo ?? '—');
+    const freqLabel = n._horas != null ? `a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}` : '—';
     let proxHtml = '—';
     if (n._prox) {
       const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
