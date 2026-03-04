@@ -335,6 +335,11 @@ const fmt = {
     if (!v) return '—';
     return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
   },
+  tsm: v => {
+    // Data+hora sem segundos — usar onde antes era fmt.ts(x).slice(0,16)
+    if (!v) return '—';
+    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  },
   n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
   badge: t => {
     const k = (t||'').toLowerCase();
@@ -362,7 +367,7 @@ const fmt = {
       ? `<span class="ciclo-freq">🔄 a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}</span>`
       : '';
     const proxLabel = n._prox
-      ? `<span class="ciclo-prox">→ ${fmt.ts(n._prox).slice(0,16)}</span>`
+      ? `<span class="ciclo-prox">→ ${fmt.tsm(n._prox)}</span>`
       : '';
     return `<div class="card-ciclo">${freqLabel}${proxLabel}${statusCiclo}</div>`;
   },
@@ -593,7 +598,7 @@ async function carregarGrafico() {
   try {
     const url  = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
     const rows = await (await fetch(url)).json();
-    const labels  = rows.map(r => fmt.ts(r.hora).slice(0,16));
+    const labels  = rows.map(r => fmt.tsm(r.hora));
     const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
     const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
     const ctx = document.getElementById('chartTamanho').getContext('2d');
@@ -667,7 +672,7 @@ function renderHistorico(rows) {
     let proxHtml = '—';
     if (n._prox) {
       const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
-      proxHtml = fmt.ts(n._prox).slice(0,16)
+      proxHtml = fmt.tsm(n._prox)
         + (atrasado ? ' <span style="color:#f97316;font-weight:700" title="Ciclo atrasado">⚠</span>' : '');
     }
     return `<tr onclick="abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})">
