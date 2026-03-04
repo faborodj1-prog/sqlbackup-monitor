@@ -6,13 +6,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+// Dapper — mapeia colunas PascalCase do PostgreSQL para propriedades C#
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = false;
+SqlMapper.AddTypeMap(typeof(DateTime),  System.Data.DbType.DateTime2);
+SqlMapper.AddTypeMap(typeof(DateTime?), System.Data.DbType.DateTime2);
 
 var app = builder.Build();
 app.UseCors();
-app.UseStaticFiles(); // serve wwwroot/index.html
+app.UseStaticFiles();
 
 // ── Configuração ──────────────────────────────────────────────────────────────
-// Render: configure as env vars DATABASE_URL e API_KEY no painel Environment
 var rawUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
           ?? app.Configuration.GetConnectionString("DefaultConnection")
           ?? throw new Exception("DATABASE_URL nao configurada.");
@@ -39,6 +42,8 @@ var apiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "dev-key-local";
 await using (var conn = new NpgsqlConnection(connStr))
 {
     await conn.OpenAsync();
+
+    // Cria a tabela com todos os campos incluindo os novos
     await conn.ExecuteAsync(@"
         CREATE TABLE IF NOT EXISTS ""BackupLogs"" (
             ""Id""                SERIAL PRIMARY KEY,
@@ -57,11 +62,20 @@ await using (var conn = new NpgsqlConnection(connStr))
             ""TamanhoDadosGB""    NUMERIC(10,3) DEFAULT 0,
             ""TamanhoLogGB""      NUMERIC(10,3) DEFAULT 0,
             ""PercentualExpress"" NUMERIC(5,2)  DEFAULT 0,
-            ""StatusLimite""      TEXT
+            ""StatusLimite""      TEXT,
+            ""IntervalHoras""     INTEGER       DEFAULT 0,
+            ""ProximaExecucao""   TIMESTAMPTZ
         );
-        CREATE INDEX IF NOT EXISTS idx_bl_banco   ON ""BackupLogs""(""BancoNome"");
-        CREATE INDEX IF NOT EXISTS idx_bl_data    ON ""BackupLogs""(""DataExecucao"" DESC);
-        CREATE INDEX IF NOT EXISTS idx_bl_tipo    ON ""BackupLogs""(""TipoBackup"");
+        CREATE INDEX IF NOT EXISTS idx_bl_banco ON ""BackupLogs""(""BancoNome"");
+        CREATE INDEX IF NOT EXISTS idx_bl_data  ON ""BackupLogs""(""DataExecucao"" DESC);
+        CREATE INDEX IF NOT EXISTS idx_bl_tipo  ON ""BackupLogs""(""TipoBackup"");
+    ");
+
+    // Migração segura — adiciona colunas novas se a tabela já existia sem elas
+    await conn.ExecuteAsync(@"
+        ALTER TABLE ""BackupLogs""
+            ADD COLUMN IF NOT EXISTS ""IntervalHoras""   INTEGER     DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS ""ProximaExecucao"" TIMESTAMPTZ;
     ");
 }
 
@@ -80,12 +94,14 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             ""DataExecucao"", ""ClienteNome"", ""ClienteCNPJ"",
             ""BancoNome"", ""TipoBackup"", ""Status"", ""NomeArquivo"", ""Ciclo"",
             ""Servidor"", ""Edicao"", ""Versao"", ""Recovery"",
-            ""TamanhoDadosGB"", ""TamanhoLogGB"", ""PercentualExpress"", ""StatusLimite""
+            ""TamanhoDadosGB"", ""TamanhoLogGB"", ""PercentualExpress"", ""StatusLimite"",
+            ""IntervalHoras"", ""ProximaExecucao""
         ) VALUES (
             @DataExecucao, @ClienteNome, @ClienteCNPJ,
             @BancoNome, @TipoBackup, @Status, @NomeArquivo, @Ciclo,
             @Servidor, @Edicao, @Versao, @Recovery,
-            @TamanhoDadosGB, @TamanhoLogGB, @PercentualExpress, @StatusLimite
+            @TamanhoDadosGB, @TamanhoLogGB, @PercentualExpress, @StatusLimite,
+            @IntervalHoras, @ProximaExecucao
         )", log);
 
     return Results.Ok(new { message = "Backup registrado com sucesso" });
