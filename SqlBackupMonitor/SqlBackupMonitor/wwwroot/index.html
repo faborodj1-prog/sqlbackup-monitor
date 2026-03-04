@@ -285,11 +285,11 @@
         <table>
           <thead><tr>
             <th>Data/Hora</th><th>Tipo</th><th>Cliente</th>
-            <th>Doc</th><th>Freq.</th><th>Próx. Ciclo</th><th>Arquivo</th>
-            <th>Dados GB</th><th>Log GB</th><th>Express %</th><th>Status</th>
+            <th>Doc</th><th>Freq. Ciclo</th><th>Próx. Execução</th>
+            <th>Tamanho</th><th>Express %</th><th>Status</th>
           </tr></thead>
           <tbody id="tabelaHistorico">
-            <tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>
+            <tr><td colspan="9" class="loader"><div class="spin"></div> Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -346,26 +346,49 @@ const fmt = {
   exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
   date: d => d.toISOString().slice(0,10),
   // Retorna HTML do bloco de ciclo para o card
+  // Campos do JSON: intervalHoras (número), proximaExecucao (ISO string)
   cardCiclo: r => {
-    if (!r.proximoCiclo && !r.ciclo) return '';
+    const n = nr(r);
+    if (!n._horas && !n._prox) return '';
     const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
     let statusCiclo = '';
-    if (r.proximoCiclo) {
-      const prox = new Date(r.proximoCiclo);
-      const atrasado = new Date() > new Date(prox.getTime() + tolerancia * 60000);
+    if (n._prox) {
+      const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
       statusCiclo = atrasado
         ? '<span class="ciclo-late">⚠ atrasado</span>'
         : '<span class="ciclo-ok">✓</span>';
     }
-    const freqLabel = r.ciclo ? `<span class="ciclo-freq">🔄 ${r.ciclo}</span>` : '';
-    const proxLabel = r.proximoCiclo
-      ? `<span class="ciclo-prox">→ ${fmt.ts(r.proximoCiclo).slice(0,16)}</span>`
+    const freqLabel = n._horas != null
+      ? `<span class="ciclo-freq">🔄 a cada ${n._horas}h</span>`
+      : '';
+    const proxLabel = n._prox
+      ? `<span class="ciclo-prox">→ ${fmt.ts(n._prox).slice(0,16)}</span>`
       : '';
     return `<div class="card-ciclo">${freqLabel}${proxLabel}${statusCiclo}</div>`;
   },
 };
 
 const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
+
+// Normaliza qualquer registro (novo JSON ou legado) para campos canônicos
+// Novo:   { cliente, banco, estado, mensagem, intervalHoras, proximaExecucao, tamanho }
+// Legado: { clienteNome, bancoNome, tipoBackup, status, ciclo, proximoCiclo, tamanhoDadosGB }
+function nr(r) {
+  return {
+    ...r,
+    _nome:   r.cliente      ?? r.clienteNome ?? '—',
+    _doc:    r.clienteCNPJ  ?? '',           // pode não vir no novo JSON
+    _banco:  r.banco        ?? r.bancoNome   ?? '—',
+    _estado: r.estado       ?? r.tipoBackup  ?? '',
+    _msg:    r.mensagem     ?? r.status      ?? '—',
+    _horas:  r.intervalHoras ?? r.intervalohoras ?? null,
+    _prox:   r.proximaExecucao ?? r.proximoCiclo ?? null,
+    _tam:    r.tamanho      ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
+    _dt:     r.dataExecucao ?? r.proximaExecucao ?? null,
+    // chave única: prefere CNPJ, fallback ao nome normalizado
+    _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
+  };
+}
 
 // Estado
 let chart = null;
@@ -379,13 +402,14 @@ function onCardClick(el) {
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
-  // Toggle: mesmo card deseleciona (chave única = clienteCNPJ)
-  if (cardSelecionado && cardSelecionado.clienteCNPJ === clienteCNPJ) {
+  const _key        = el.dataset.key;
+  // Toggle: mesmo card deseleciona
+  if (cardSelecionado && cardSelecionado._key === _key) {
     desselecionarCard(); return;
   }
-  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ };
+  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
-    const isMe = c.dataset.doc === clienteCNPJ;
+    const isMe = c.dataset.key === _key;
     c.classList.toggle('selected', isMe);
     c.classList.toggle('dimmed', !isMe);
   });
@@ -454,31 +478,32 @@ function aplicarFiltroCliente() {
   const de  = document.getElementById('fDe').value;
   const ate = document.getElementById('fAte').value;
 
-  // Filtra cards (filtros globais)
-  const cardsFiltrados = todosResumo.filter(r => {
-    if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
-    if (de || ate) {
-      const dt = new Date(r.dataExecucao);
-      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    }
+  const passaData = (r) => {
+    const n = nr(r);
+    if (!de && !ate) return true;
+    const dt = new Date(n._dt);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
     return true;
+  };
+
+  // Filtra cards
+  const cardsFiltrados = todosResumo.filter(r => {
+    const n = nr(r);
+    if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false;
+    return passaData(r);
   });
   renderCards(cardsFiltrados);
 
-  // Filtra histórico: card selecionado tem prioridade
+  // Filtra histórico: card selecionado tem prioridade sobre filtro de texto
   const histFiltrado = todosHistorico.filter(r => {
+    const n = nr(r);
     if (cardSelecionado) {
-      if (norm(r.clienteCNPJ) !== norm(cardSelecionado.clienteCNPJ)) return false;
+      if (n._key !== cardSelecionado._key) return false;
     } else {
-      if (cli && !norm(r.clienteNome).includes(cli) && !norm(r.clienteCNPJ).includes(cli)) return false;
+      if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false;
     }
-    if (de || ate) {
-      const dt = new Date(r.dataExecucao);
-      if (de  && dt < new Date(de  + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    }
-    return true;
+    return passaData(r);
   });
   renderHistorico(histFiltrado);
 }
@@ -497,19 +522,18 @@ async function carregarBancos() {
 }
 
 function carregarResumo() {
-  // Deriva os cards direto do todosHistorico (mesma fonte da tabela),
-  // pegando o registro mais recente por CNPJ.
-  // Isso resolve o problema de /api/resumo retornar só um registro por banco,
-  // fazendo clientes com mesmo banco se sobreporem.
-  const porCNPJ = new Map();
+  // Deriva cards do todosHistorico: 1 card por cliente (chave = CNPJ ou nome)
+  // mantendo o registro mais recente de cada um.
+  const porCliente = new Map();
   todosHistorico.forEach(r => {
-    const key = norm(r.clienteCNPJ) || norm(r.clienteNome);
-    const atual = porCNPJ.get(key);
-    if (!atual || new Date(r.dataExecucao) > new Date(atual.dataExecucao)) {
-      porCNPJ.set(key, r);
+    const n = nr(r);
+    if (!n._key) return;
+    const atual = porCliente.get(n._key);
+    if (!atual || new Date(n._dt) > new Date(nr(atual)._dt)) {
+      porCliente.set(n._key, r);
     }
   });
-  todosResumo = [...porCNPJ.values()];
+  todosResumo = [...porCliente.values()];
   aplicarFiltroCliente();
 }
 
@@ -519,30 +543,31 @@ function renderCards(rows) {
 
   // Ordena alfabeticamente pelo nome do cliente
   const sorted = [...rows].sort((a,b) =>
-    (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
+    nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR'));
 
   el.innerHTML = sorted.map(r => {
+    const n   = nr(r);
     const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
-    const cicloAtrasado = r.proximoCiclo
-      ? new Date() > new Date(new Date(r.proximoCiclo).getTime() + tolerancia * 60000)
+    const cicloAtrasado = n._prox
+      ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000)
       : false;
-    const cls  = fmt.cardCls(r.tipoBackup);
+    const cls  = fmt.cardCls(n._estado);
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
     const fc   = fmt.exprColor(pct);
-    const isSel = cardSelecionado && norm(r.clienteCNPJ) === norm(cardSelecionado.clienteCNPJ);
+    const isSel = cardSelecionado && n._key === cardSelecionado._key;
     const isDim = cardSelecionado && !isSel;
     return `<div class="card ${cls}${cicloAtrasado?' ciclo-atrasado':''}${isSel?' selected':''}${isDim?' dimmed':''}"
-         data-banco="${r.bancoNome??''}" data-nome="${r.clienteNome??''}" data-doc="${r.clienteCNPJ??''}"
+         data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
          onclick="onCardClick(this)">
       <div class="card-header">
-        <div class="card-cliente">${r.clienteNome??'—'}</div>
-        ${fmt.badge(r.tipoBackup)}
+        <div class="card-cliente">${n._nome}</div>
+        ${fmt.badge(n._estado)}
       </div>
-      <div class="card-doc">${r.clienteCNPJ??''}</div>
-      <div class="card-banco-sub">🗄 ${r.bancoNome??'—'}</div>
+      <div class="card-doc">${n._doc}</div>
+      <div class="card-banco-sub">🗄 ${n._banco}</div>
       <div class="card-metrics">
-        <div class="metric"><label>Dados</label><value>${fmt.n(r.tamanhoDadosGB)} GB</value></div>
+        <div class="metric"><label>Tamanho</label><value style="font-size:11px">${n._tam}</value></div>
         <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
         <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
         <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
@@ -555,7 +580,7 @@ function renderCards(rows) {
         </div>
         <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
       </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
-      <div class="card-msg" title="${r.status??''}">${r.status??''}</div>
+      <div class="card-msg" title="${r.mensagem??r.status??''}">${r.mensagem??r.status??''}</div>
       ${fmt.cardCiclo(r)}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
     </div>`;
@@ -606,7 +631,7 @@ async function carregarHistorico() {
   // a filtragem por clienteCNPJ é feita em memória por aplicarFiltroCliente()
   const banco = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
   document.getElementById('tabelaHistorico').innerHTML=
-    `<tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
+    `<tr><td colspan="9" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
     let url = `/api/historico?limit=${limit}`;
     if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
@@ -615,39 +640,38 @@ async function carregarHistorico() {
     aplicarFiltroCliente();
   } catch(e) {
     document.getElementById('tabelaHistorico').innerHTML=
-      `<tr><td colspan="11" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+      `<tr><td colspan="9" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
   }
 }
 
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
-  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="11" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
   const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
   tbody.innerHTML = rows.map(r => {
+    const n = nr(r);
     const isEx  = (r.edicao||'').toLowerCase().includes('express');
     const pct   = Number(r.percentualExpress||0);
     const pctH  = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
-    const cnpjNum = (r.clienteCNPJ||'').replace(/\D/g,'');
-    const docCurto = cnpjNum.length >= 6 ? '…' + cnpjNum.slice(-6) : (r.clienteCNPJ||'—');
+    const cnpjNum  = n._doc.replace(/\D/g,'');
+    const docCurto = cnpjNum.length >= 6 ? '…' + cnpjNum.slice(-6) : (n._doc||'—');
+    const freqLabel = n._horas != null ? `a cada ${n._horas}h` : (r.ciclo ?? '—');
     let proxHtml = '—';
-    if (r.proximoCiclo) {
-      const prox = new Date(r.proximoCiclo);
-      const atrasado = new Date() > new Date(prox.getTime() + tolerancia * 60000);
-      proxHtml = fmt.ts(r.proximoCiclo).slice(0,16)
+    if (n._prox) {
+      const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
+      proxHtml = fmt.ts(n._prox).slice(0,16)
         + (atrasado ? ' <span style="color:#f97316;font-weight:700" title="Ciclo atrasado">⚠</span>' : '');
     }
-    return `<tr onclick="abrirCliente(${JSON.stringify(r.clienteNome)},${JSON.stringify(r.clienteCNPJ)})">
-      <td class="muted">${fmt.ts(r.dataExecucao)}</td>
-      <td>${fmt.badge(r.tipoBackup)}</td>
-      <td><strong>${r.clienteNome??'—'}</strong></td>
-      <td class="muted" style="font-size:11px" title="${r.clienteCNPJ??''}">${docCurto}</td>
-      <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
+    return `<tr onclick="abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})">
+      <td class="muted">${fmt.ts(n._dt)}</td>
+      <td>${fmt.badge(n._estado)}</td>
+      <td><strong>${n._nome}</strong></td>
+      <td class="muted" style="font-size:11px" title="${n._doc}">${docCurto}</td>
+      <td class="muted" style="font-size:11px;white-space:nowrap">${freqLabel}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${proxHtml}</td>
-      <td class="muted" style="font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-      <td>${fmt.n(r.tamanhoDadosGB)}</td>
-      <td>${fmt.n(r.tamanhoLogGB)}</td>
+      <td class="muted" style="font-size:11px">${n._tam}</td>
       <td>${pctH}</td>
-      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
     </tr>`;
   }).join('');
 }
@@ -697,18 +721,17 @@ function renderModalTabela() {
   const de  = document.getElementById('mDe').value;
   const ate = document.getElementById('mAte').value;
   const regs = todosHistorico.filter(r => {
-    const nomeOk = norm(r.clienteNome) === norm(nome);
-    const docOk  = norm(r.clienteCNPJ) === norm(doc);
-    if (!nomeOk && !docOk) return false;
+    const n = nr(r);
+    if (n._key !== norm(doc) && norm(n._nome) !== norm(nome)) return false;
     const dt = new Date(r.dataExecucao);
     if (de  && dt < new Date(de  + 'T00:00:00')) return false;
     if (ate && dt > new Date(ate + 'T23:59:59')) return false;
     return true;
   }).sort((a,b) => new Date(b.dataExecucao)-new Date(a.dataExecucao));
   const total   = regs.length;
-  const okN     = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='ok').length;
-  const erroN   = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='erro').length;
-  const alertaN = regs.filter(r=>(r.tipoBackup||'').toLowerCase()==='alerta').length;
+  const okN     = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='ok').length;
+  const erroN   = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='erro').length;
+  const alertaN = regs.filter(r=>{ const e=(nr(r)._estado||'').toLowerCase(); return e!=='ok'&&e!=='erro'&&e!==''; }).length;
   document.getElementById('modalStats').innerHTML = `
     <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
@@ -722,8 +745,8 @@ function renderModalTabela() {
     const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : '—';
     return `<tr>
       <td class="muted">${fmt.ts(r.dataExecucao)}</td>
-      <td>${fmt.badge(r.tipoBackup)}</td>
-      <td><strong>${r.bancoNome??'—'}</strong></td>
+      <td>${fmt.badge(nr(r)._estado)}</td>
+      <td><strong>${nr(r)._banco}</strong></td>
       <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
       <td class="muted" style="font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
       <td>${fmt.n(r.tamanhoDadosGB)}</td>
