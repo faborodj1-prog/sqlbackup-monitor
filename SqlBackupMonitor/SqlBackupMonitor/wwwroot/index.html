@@ -446,32 +446,29 @@ async function carregarBancos() {
   } catch(e) { console.error(e); }
 }
 
-async function carregarResumo() {
-  const el = document.getElementById('cardsContainer');
-  try {
-    todosResumo = await (await fetch('/api/resumo')).json();
-    aplicarFiltroCliente();
-  } catch(e) {
-    el.innerHTML=`<div class="loader" style="color:var(--erro)">Erro ao carregar resumo.</div>`;
-  }
-}
-
-function renderCards(rows) {
-  const el = document.getElementById('cardsContainer');
-  if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
-
-  // Deduplica por CNPJ — mantém o registro mais recente de cada cliente
+function carregarResumo() {
+  // Deriva os cards direto do todosHistorico (mesma fonte da tabela),
+  // pegando o registro mais recente por CNPJ.
+  // Isso resolve o problema de /api/resumo retornar só um registro por banco,
+  // fazendo clientes com mesmo banco se sobreporem.
   const porCNPJ = new Map();
-  rows.forEach(r => {
+  todosHistorico.forEach(r => {
     const key = norm(r.clienteCNPJ) || norm(r.clienteNome);
     const atual = porCNPJ.get(key);
     if (!atual || new Date(r.dataExecucao) > new Date(atual.dataExecucao)) {
       porCNPJ.set(key, r);
     }
   });
+  todosResumo = [...porCNPJ.values()];
+  aplicarFiltroCliente();
+}
+
+function renderCards(rows) {
+  const el = document.getElementById('cardsContainer');
+  if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
 
   // Ordena alfabeticamente pelo nome do cliente
-  const sorted = [...porCNPJ.values()].sort((a,b) =>
+  const sorted = [...rows].sort((a,b) =>
     (a.clienteNome||'').localeCompare(b.clienteNome||'', 'pt-BR'));
 
   el.innerHTML = sorted.map(r => {
@@ -672,11 +669,12 @@ function renderModalTabela() {
   }).join('');
 }
 
-// Carregar tudo
 async function carregarTudo() {
   document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
   await carregarBancos();
-  await Promise.all([carregarResumo(), carregarGrafico(), carregarHistorico()]);
+  await carregarGrafico();
+  await carregarHistorico(); // carrega todosHistorico primeiro
+  carregarResumo();          // deriva os cards a partir do todosHistorico
 }
 
 carregarTudo();
