@@ -2,7 +2,7 @@ namespace BackupMonitorApi.Models;
 
 public class BackupLog
 {
-    public int      Id                { get; set; }  // PK — gerado pelo banco
+    public int      Id                { get; set; }   // PK — gerado pelo banco
     public DateTime DataExecucao      { get; set; }
     public string   ClienteNome       { get; set; } = "";
     public string   ClienteCNPJ       { get; set; } = "";
@@ -19,6 +19,14 @@ public class BackupLog
     public decimal  TamanhoLogGB      { get; set; }
     public decimal  PercentualExpress { get; set; }
     public string   StatusLimite      { get; set; } = "";
-    public int       IntervalHoras     { get; set; }         // intervalo do ciclo em horas
-    public DateTime? ProximaExecucao   { get; set; }         // Atualizado + IntervalHoras (nullable — campo novo)
+    public int      IntervalHoras     { get; set; }
+    public DateTime? ProximaExecucao  { get; set; }
+
+    // ── Campos novos (estratégia adaptativa) ────────────────────────
+    // Simple | Full
+    public string Estrategia   { get; set; } = "Simple";
+    // Diferencial | Log | Full | Diferencial (âncora) |
+    // ShrinkLog | ShrinkLogFalhou | AjusteMemoria | PressaoMemoria |
+    // MudancaParaSimple | MudancaParaFull | FalhaFullPreSimple
+    public string TipoOperacao { get; set; } = "Diferencial";
 }
