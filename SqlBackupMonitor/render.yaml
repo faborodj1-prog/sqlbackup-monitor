@@ -1,15 +1,17 @@
 services:
   - type: web
     name: sqlbackup-monitor
-    runtime: dotnet
-    buildCommand: dotnet publish SqlBackupMonitor/SqlBackupMonitor.csproj -c Release -o out
-    startCommand: dotnet out/SqlBackupMonitor.dll
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
     envVars:
       - key: DATABASE_URL
-        sync: false          # você preenche no painel do Render
+        fromDatabase:
+          name: sqlbackup-db
+          property: connectionString
       - key: API_KEY
-        generateValue: true  # Render gera automaticamente
-      - key: ASPNETCORE_URLS
-        value: http://0.0.0.0:10000
-      - key: PORT
-        value: "10000"
+        generateValue: false   # definir manualmente no painel do Render
+
+databases:
+  - name: sqlbackup-db
+    plan: free
