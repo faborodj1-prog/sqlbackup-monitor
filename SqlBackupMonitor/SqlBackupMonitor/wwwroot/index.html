@@ -41,7 +41,6 @@
   .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* Filtros globais */
   .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
   .fg { display:flex; flex-direction:column; gap:4px; }
   .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
@@ -72,12 +71,16 @@
   .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
   .card-ciclo { display:flex; align-items:center; gap:5px; font-size:9px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--muted); flex-wrap:wrap; }
   .ciclo-ok   { color:var(--ok); }
-  .ciclo-ok   { color:var(--ok); }
   .ciclo-late { color:#f97316; font-weight:700; animation:blink 1.4s infinite; }
   .ciclo-freq { background:rgba(99,102,241,.15); color:var(--accent2); border-radius:3px; padding:1px 6px; font-weight:600; white-space:nowrap; }
   .ciclo-prox { color:var(--muted); margin-left:2px; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
-  /* Config bar */
+
+  /* Badge estratégia */
+  .badge-est { font-size:9px; font-weight:700; padding:1px 7px; border-radius:20px; letter-spacing:.4px; white-space:nowrap; }
+  .badge-est.simple { background:rgba(34,197,94,.12);  color:var(--ok); }
+  .badge-est.full   { background:rgba(59,130,246,.15); color:var(--accent); }
+
   .config-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:11px 18px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:11px; color:var(--muted); }
   .config-bar strong { color:var(--text); font-size:11px; }
   .config-field { display:flex; align-items:center; gap:7px; }
@@ -106,18 +109,11 @@
   .card-ts  { font-size:9px; color:var(--muted); margin-top:6px; opacity:.5; }
   .card-msg { font-size:9px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-
-  /* Banner filtro ativo */
-  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px;
-    background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25);
-    border-radius:6px; padding:11px 18px; font-size:12px; }
+  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:6px; padding:11px 18px; font-size:12px; }
   .filter-banner.visible { display:flex; }
   .filter-banner span { color:var(--muted); }
-  .filter-chip { display:inline-block; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3);
-    color:var(--accent); border-radius:20px; padding:1px 10px; font-size:10px; font-weight:600; margin-left:6px; }
-  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent);
-    font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer;
-    white-space:nowrap; transition:all .15s; }
+  .filter-chip { display:inline-block; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:var(--accent); border-radius:20px; padding:1px 10px; font-size:10px; font-weight:600; margin-left:6px; }
+  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent); font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer; white-space:nowrap; transition:all .15s; }
   .btn-deselect:hover { background:rgba(59,130,246,.12); }
 
   .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; transition:border-color .25s; }
@@ -145,10 +141,9 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
-  /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
   .overlay.open { display:flex; }
-  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(900px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(960px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
   .modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
   .modal-header h2 { font-family:var(--ui); font-size:15px; font-weight:800; }
   .modal-close { background:transparent; border:1px solid var(--border2); color:var(--muted); width:30px; height:30px; border-radius:4px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
@@ -275,6 +270,11 @@
         <select id="filtroBanco" onchange="if(!cardSelecionado) carregarHistorico()">
           <option value="">Todos os bancos</option>
         </select>
+        <select id="filtroEstrategia" onchange="carregarHistorico()">
+          <option value="">Todas as estratégias</option>
+          <option value="Simple">Simple</option>
+          <option value="Full">Full</option>
+        </select>
         <select id="filtroLimit" onchange="carregarHistorico()">
           <option value="50">50 registros</option>
           <option value="100" selected>100 registros</option>
@@ -285,11 +285,12 @@
         <table>
           <thead><tr>
             <th>Data/Hora</th><th>Tipo</th><th>Cliente</th>
-            <th>Doc</th><th>Freq. Ciclo</th><th>Próx. Execução</th>
-            <th>Tamanho</th><th>Express %</th><th>Status</th>
+            <th>Banco</th><th>Estratégia</th><th>Operação</th>
+            <th>Freq.</th><th>Próx. Execução</th>
+            <th>Dados GB</th><th>Log GB</th><th>Status</th>
           </tr></thead>
           <tbody id="tabelaHistorico">
-            <tr><td colspan="9" class="loader"><div class="spin"></div> Carregando...</td></tr>
+            <tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -318,8 +319,9 @@
       <div style="overflow-x:auto;">
         <table>
           <thead><tr>
-            <th>Data/Hora</th><th>Tipo</th><th>Banco</th><th>Ciclo</th>
-            <th>Arquivo</th><th>Dados GB</th><th>Express %</th><th>Status</th>
+            <th>Data/Hora</th><th>Tipo</th><th>Banco</th>
+            <th>Estratégia</th><th>Operação</th><th>Ciclo</th>
+            <th>Arquivo</th><th>Dados GB</th><th>Log GB</th><th>Status</th>
           </tr></thead>
           <tbody id="modalTbody"></tbody>
         </table>
@@ -329,14 +331,12 @@
 </div>
 
 <script>
-// Formatadores
 const fmt = {
   ts: v => {
     if (!v) return '—';
     return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
   },
   tsm: v => {
-    // Data+hora sem segundos — usar onde antes era fmt.ts(x).slice(0,16)
     if (!v) return '—';
     return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   },
@@ -347,11 +347,30 @@ const fmt = {
     const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
     return `<span class="badge ${c}">${l[c]??t}</span>`;
   },
+  badgeEst: e => {
+    if (!e) return '—';
+    const cls = e.toLowerCase() === 'full' ? 'full' : 'simple';
+    return `<span class="badge-est ${cls}">${e}</span>`;
+  },
+  tipoOpIcon: t => {
+    const m = {
+      'Full'               : '🔵 Full',
+      'Diferencial'        : '🟡 Diferencial',
+      'Diferencial (âncora)':'🟠 Âncora',
+      'Log'                : '📋 Log',
+      'ShrinkLog'          : '🗜 Shrink',
+      'ShrinkLogFalhou'    : '🗜❌ Shrink Falhou',
+      'AjusteMemoria'      : '🧠 Memória',
+      'PressaoMemoria'     : '🧠⚠ Pressão Mem',
+      'MudancaParaSimple'  : '⚙ →Simple',
+      'MudancaParaFull'    : '⚙ →Full',
+      'FalhaFullPreSimple' : '❌ Falha PreSimple',
+    };
+    return m[t] ?? (t || '—');
+  },
   cardCls: t => { const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta'; },
   exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
   date: d => d.toISOString().slice(0,10),
-  // Retorna HTML do bloco de ciclo para o card
-  // Campos do JSON: intervalHoras (número), proximaExecucao (ISO string)
   cardCiclo: r => {
     const n = nr(r);
     if (!n._horas && !n._prox) return '';
@@ -375,9 +394,6 @@ const fmt = {
 
 const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
 
-// Normaliza qualquer registro (novo JSON ou legado) para campos canônicos
-// Novo:   { cliente, banco, estado, mensagem, intervalHoras, proximaExecucao, tamanho }
-// Legado: { clienteNome, bancoNome, tipoBackup, status, ciclo, proximoCiclo, tamanhoDadosGB }
 function nr(r) {
   if (!r || typeof r !== 'object') return { _nome:'—',_doc:'',_banco:'—',_estado:'',_msg:'—',_horas:null,_prox:null,_tam:'—',_dt:null,_key:'' };
   return {
@@ -387,31 +403,28 @@ function nr(r) {
     _banco:  r.banco          ?? r.bancoNome     ?? '—',
     _estado: r.estado         ?? r.tipoBackup    ?? r.alertaCiclo ?? '',
     _msg:    r.mensagem       ?? r.status        ?? '—',
-    _horas:  (r.intervalHoras > 0 ? r.intervalHoras : (r.intervalohoras > 0 ? r.intervalohoras : null)),
-    _prox:   r.proximaExecucao ?? r.proximoCiclo ?? null,
+    _horas:  (r.intervalHoras > 0 ? r.intervalHoras : null),
+    _prox:   r.proximaExecucao ?? null,
     _tam:    r.tamanho        ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
-    _dt:     r.dataExecucao   ?? r.proximaExecucao ?? null,
+    _dt:     r.dataExecucao   ?? null,
     _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
+    _est:    r.estrategia     ?? r.Estrategia    ?? 'Simple',
+    _op:     r.tipoOperacao   ?? r.TipoOperacao  ?? 'Diferencial',
   };
 }
 
-// Estado
 let chart = null;
 let todosResumo    = [];
 let todosHistorico = [];
 let clienteAtual   = null;
-let cardSelecionado = null; // { bancoNome, clienteCNPJ, clienteNome }
+let cardSelecionado = null;
 
-// Seleção de card
 function onCardClick(el) {
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
   const _key        = el.dataset.key;
-  // Toggle: mesmo card deseleciona
-  if (cardSelecionado && cardSelecionado._key === _key) {
-    desselecionarCard(); return;
-  }
+  if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); return; }
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
     const isMe = c.dataset.key === _key;
@@ -423,13 +436,11 @@ function onCardClick(el) {
   document.getElementById('filterBanner').classList.add('visible');
   document.getElementById('chartContainer').classList.add('hl');
   document.getElementById('tableContainer').classList.add('hl');
-  // Gráfico: seleciona banco no select SEM disparar onchange (evita recarregar histórico)
   const sg = document.getElementById('selectBancoGrafico');
   for (let i = 0; i < sg.options.length; i++) {
     if (sg.options[i].value === bancoNome) { sg.selectedIndex = i; break; }
   }
   carregarGrafico();
-  // Filtra histórico apenas pelos dados já em memória (todosHistorico), sem novo fetch
   aplicarFiltroCliente();
   setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 60);
 }
@@ -446,19 +457,12 @@ function desselecionarCard() {
   carregarHistorico();
 }
 
-// Filtros globais
 function setPeriodo(p) {
   const hoje = new Date();
   let de, ate;
-  if (p === 'hoje') {
-    de = ate = fmt.date(hoje);
-  } else if (p === 'mes') {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
-    ate = fmt.date(hoje);
-  } else {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1));
-    ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
-  }
+  if (p === 'hoje') { de = ate = fmt.date(hoje); }
+  else if (p === 'mes') { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); ate = fmt.date(hoje); }
+  else { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1)); ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0)); }
   document.getElementById('fDe').value  = de;
   document.getElementById('fAte').value = ate;
   document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
@@ -466,9 +470,7 @@ function setPeriodo(p) {
   aplicarFiltroCliente();
 }
 
-function limparPeriodoBtns() {
-  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
-}
+function limparPeriodoBtns() { document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active')); }
 
 function limparFiltros() {
   document.getElementById('fCliente').value = '';
@@ -492,7 +494,6 @@ function aplicarFiltroCliente() {
     return true;
   };
 
-  // Filtra cards
   const cardsFiltrados = todosResumo.filter(r => {
     const n = nr(r);
     if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false;
@@ -500,20 +501,15 @@ function aplicarFiltroCliente() {
   });
   renderCards(cardsFiltrados);
 
-  // Filtra histórico: card selecionado tem prioridade sobre filtro de texto
   const histFiltrado = todosHistorico.filter(r => {
     const n = nr(r);
-    if (cardSelecionado) {
-      if (n._key !== cardSelecionado._key) return false;
-    } else {
-      if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false;
-    }
+    if (cardSelecionado) { if (n._key !== cardSelecionado._key) return false; }
+    else { if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false; }
     return passaData(r);
   });
   renderHistorico(histFiltrado);
 }
 
-// API
 async function carregarBancos() {
   try {
     const bancos = await (await fetch('/api/bancos')).json();
@@ -527,16 +523,12 @@ async function carregarBancos() {
 }
 
 function carregarResumo() {
-  // Deriva cards do todosHistorico: 1 card por cliente (chave = CNPJ ou nome)
-  // mantendo o registro mais recente de cada um.
   const porCliente = new Map();
   todosHistorico.forEach(r => {
     const n = nr(r);
     if (!n._key) return;
     const atual = porCliente.get(n._key);
-    if (!atual || new Date(n._dt) > new Date(nr(atual)._dt)) {
-      porCliente.set(n._key, r);
-    }
+    if (!atual || new Date(n._dt) > new Date(nr(atual)._dt)) porCliente.set(n._key, r);
   });
   todosResumo = [...porCliente.values()];
   aplicarFiltroCliente();
@@ -545,17 +537,11 @@ function carregarResumo() {
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
-
-  // Ordena alfabeticamente pelo nome do cliente
-  const sorted = [...rows].sort((a,b) =>
-    nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR'));
-
+  const sorted = [...rows].sort((a,b) => nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR'));
   el.innerHTML = sorted.map(r => {
     const n   = nr(r);
     const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
-    const cicloAtrasado = n._prox
-      ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000)
-      : false;
+    const cicloAtrasado = n._prox ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000) : false;
     const cls  = fmt.cardCls(n._estado);
     const isEx = (r.edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||0);
@@ -570,24 +556,21 @@ function renderCards(rows) {
         ${fmt.badge(n._estado)}
       </div>
       <div class="card-doc">${n._doc}</div>
-      <div class="card-banco-sub">🗄 ${n._banco}</div>
+      <div class="card-banco-sub">🗄 ${n._banco} &nbsp;${fmt.badgeEst(n._est)}</div>
       <div class="card-metrics">
-        <div class="metric"><label>Tamanho</label><value style="font-size:11px">${n._tam}</value></div>
-        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB)} GB</value></div>
-        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??'—'}</value></div>
-        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??'—'}</value></div>
+        <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
+        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB||r.TamanhoLogGB)} GB</value></div>
+        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??r.Servidor??'—'}</value></div>
+        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??r.Recovery??'—'}</value></div>
       </div>
       ${isEx ? `
       <div class="express-bar">
-        <div class="express-bar-label">
-          <span>Express ${fmt.n(pct,1)}% de 10 GB</span>
-          <span style="color:${fc}">${r.statusLimite??''}</span>
-        </div>
+        <div class="express-bar-label"><span>Express ${fmt.n(pct,1)}% de 10 GB</span><span style="color:${fc}">${r.statusLimite??r.StatusLimite??''}</span></div>
         <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
-      </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??''}</div>`}
-      <div class="card-msg" title="${r.mensagem??r.status??''}">${r.mensagem??r.status??''}</div>
+      </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??r.StatusLimite??''}</div>`}
+      <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
       ${fmt.cardCiclo(r)}
-      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao)}</div>
+      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
     </div>`;
   }).join('');
 }
@@ -615,11 +598,9 @@ async function carregarGrafico() {
       options: {
         responsive:true, maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
+        plugins:{ legend:{display:false},
           tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,
-            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}}
-        },
+            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}} },
         scales:{
           x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
           y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
@@ -630,72 +611,66 @@ async function carregarGrafico() {
 }
 
 async function carregarHistorico() {
-  const tipo  = document.getElementById('filtroTipo').value;
-  const limit = document.getElementById('filtroLimit').value;
-  const banco = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
+  const tipo       = document.getElementById('filtroTipo').value;
+  const limit      = document.getElementById('filtroLimit').value;
+  const estrategia = document.getElementById('filtroEstrategia').value;
+  const banco      = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
   document.getElementById('tabelaHistorico').innerHTML=
-    `<tr><td colspan="9" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
+    `<tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
-    // Tenta endpoint principal; adapta URL conforme sua API
     let url = `/api/historico?limit=${limit}`;
-    if (tipo)  url += `&tipo=${encodeURIComponent(tipo)}`;
-    if (banco) url += `&banco=${encodeURIComponent(banco)}`;
+    if (tipo)       url += `&tipo=${encodeURIComponent(tipo)}`;
+    if (banco)      url += `&banco=${encodeURIComponent(banco)}`;
+    if (estrategia) url += `&estrategia=${encodeURIComponent(estrategia)}`;
     const resp = await fetch(url);
     const data = await resp.json();
-    // Aceita tanto array direto quanto { data: [...] } ou { historico: [...] }
-    todosHistorico = Array.isArray(data) ? data
-      : (data.historico ?? data.data ?? data.registros ?? data.items ?? []);
+    todosHistorico = Array.isArray(data) ? data : (data.historico ?? data.data ?? data.registros ?? data.items ?? []);
     if (!Array.isArray(todosHistorico)) todosHistorico = [];
-    // DEBUG — remover após validar
-    console.log('[Monitor] historico recebido:', todosHistorico.length, 'registros');
-    if (todosHistorico.length) console.log('[Monitor] exemplo campo 0:', JSON.stringify(todosHistorico[0]));
     aplicarFiltroCliente();
   } catch(e) {
     console.error('Histórico:', e);
     document.getElementById('tabelaHistorico').innerHTML=
-      `<tr><td colspan="9" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+      `<tr><td colspan="11" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
   }
 }
 
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
-  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="11" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
   const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
   tbody.innerHTML = rows.map(r => {
-    const n = nr(r);
-    const isEx  = (r.edicao||'').toLowerCase().includes('express');
-    const pct   = Number(r.percentualExpress||0);
-    const pctH  = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : `<span class="muted">—</span>`;
-    const cnpjNum  = n._doc.replace(/\D/g,'');
-    const docCurto = cnpjNum.length >= 6 ? '…' + cnpjNum.slice(-6) : (n._doc||'—');
+    const n    = nr(r);
+    const isEx = (r.edicao||r.Edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||r.PercentualExpress||0);
+    const dadosGB = r.tamanhoDadosGB ?? r.TamanhoDadosGB;
+    const logGB   = r.tamanhoLogGB   ?? r.TamanhoLogGB;
     const freqLabel = n._horas != null ? `a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}` : '—';
     let proxHtml = '—';
     if (n._prox) {
       const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
-      proxHtml = fmt.tsm(n._prox)
-        + (atrasado ? ' <span style="color:#f97316;font-weight:700" title="Ciclo atrasado">⚠</span>' : '');
+      proxHtml = fmt.tsm(n._prox) + (atrasado ? ' <span style="color:#f97316;font-weight:700">⚠</span>' : '');
     }
     return `<tr onclick="abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})">
       <td class="muted">${fmt.ts(n._dt)}</td>
       <td>${fmt.badge(n._estado)}</td>
       <td><strong>${n._nome}</strong></td>
-      <td class="muted" style="font-size:11px" title="${n._doc}">${docCurto}</td>
+      <td class="muted">${n._banco}</td>
+      <td>${fmt.badgeEst(n._est)}</td>
+      <td style="font-size:11px;white-space:nowrap">${fmt.tipoOpIcon(n._op)}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${freqLabel}</td>
       <td class="muted" style="font-size:11px;white-space:nowrap">${proxHtml}</td>
-      <td class="muted" style="font-size:11px">${n._tam}</td>
-      <td>${pctH}</td>
+      <td class="muted" style="font-size:11px">${fmt.n(dadosGB)}</td>
+      <td class="muted" style="font-size:11px">${fmt.n(logGB)}</td>
       <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
     </tr>`;
   }).join('');
 }
 
-// Modal detalhe cliente
 function abrirCliente(nome, doc) {
   clienteAtual = { nome, doc };
   document.getElementById('modalTitulo').textContent = nome || 'Cliente';
   document.getElementById('modalChips').innerHTML =
-    `<div class="chip">👤 <b>${nome||'—'}</b></div>
-     <div class="chip">📄 <b>${doc||'—'}</b></div>`;
+    `<div class="chip">👤 <b>${nome||'—'}</b></div><div class="chip">📄 <b>${doc||'—'}</b></div>`;
   setModalPeriodo('semana');
   document.getElementById('overlay').classList.add('open');
 }
@@ -706,17 +681,12 @@ function fecharOverlay(e) { if(e.target===document.getElementById('overlay')) fe
 function setModalPeriodo(p) {
   const hoje = new Date();
   let de, ate;
-  if (p === 'hoje') {
-    de = ate = fmt.date(hoje);
-  } else if (p === 'semana') {
+  if (p === 'hoje') { de = ate = fmt.date(hoje); }
+  else if (p === 'semana') {
     const dow = hoje.getDay();
     const seg = new Date(hoje); seg.setDate(hoje.getDate() - (dow===0?6:dow-1));
-    de  = fmt.date(seg);
-    ate = fmt.date(hoje);
-  } else {
-    de  = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
-    ate = fmt.date(hoje);
-  }
+    de = fmt.date(seg); ate = fmt.date(hoje);
+  } else { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); ate = fmt.date(hoje); }
   document.getElementById('mDe').value  = de;
   document.getElementById('mAte').value = ate;
   document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
@@ -724,9 +694,7 @@ function setModalPeriodo(p) {
   renderModalTabela();
 }
 
-function limparModalBtns() {
-  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
-}
+function limparModalBtns() { document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active')); }
 
 function renderModalTabela() {
   if (!clienteAtual) return;
@@ -736,11 +704,12 @@ function renderModalTabela() {
   const regs = todosHistorico.filter(r => {
     const n = nr(r);
     if (n._key !== norm(doc) && norm(n._nome) !== norm(nome)) return false;
-    const dt = new Date(r.dataExecucao);
+    const dt = new Date(r.dataExecucao??r.DataExecucao);
     if (de  && dt < new Date(de  + 'T00:00:00')) return false;
     if (ate && dt > new Date(ate + 'T23:59:59')) return false;
     return true;
-  }).sort((a,b) => new Date(b.dataExecucao)-new Date(a.dataExecucao));
+  }).sort((a,b) => new Date(b.dataExecucao??b.DataExecucao)-new Date(a.dataExecucao??a.DataExecucao));
+
   const total   = regs.length;
   const okN     = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='ok').length;
   const erroN   = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='erro').length;
@@ -750,21 +719,27 @@ function renderModalTabela() {
     <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--erro)">${erroN}</div><div class="stat-l">Erros</div></div>
     <div class="stat"><div class="stat-v" style="color:var(--alerta)">${alertaN}</div><div class="stat-l">Alertas</div></div>`;
+
   const tbody = document.getElementById('modalTbody');
-  if (!regs.length) { tbody.innerHTML='<tr><td colspan="8" class="loader">Nenhum registro neste período.</td></tr>'; return; }
+  if (!regs.length) { tbody.innerHTML='<tr><td colspan="10" class="loader">Nenhum registro neste período.</td></tr>'; return; }
   tbody.innerHTML = regs.map(r => {
-    const isEx = (r.edicao||'').toLowerCase().includes('express');
-    const pct  = Number(r.percentualExpress||0);
-    const pctH = isEx ? `<span style="color:${fmt.exprColor(pct)}">${fmt.n(pct,1)}%</span>` : '—';
+    const n    = nr(r);
+    const isEx = (r.edicao||r.Edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||r.PercentualExpress||0);
+    const dadosGB = r.tamanhoDadosGB ?? r.TamanhoDadosGB;
+    const logGB   = r.tamanhoLogGB   ?? r.TamanhoLogGB;
+    const arquivo = r.nomeArquivo ?? r.NomeArquivo ?? '—';
     return `<tr>
-      <td class="muted">${fmt.ts(r.dataExecucao)}</td>
-      <td>${fmt.badge(nr(r)._estado)}</td>
-      <td><strong>${nr(r)._banco}</strong></td>
-      <td class="muted" style="font-size:11px">${r.ciclo??'—'}</td>
-      <td class="muted" style="font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.nomeArquivo??''}">${r.nomeArquivo??'—'}</td>
-      <td>${fmt.n(r.tamanhoDadosGB)}</td>
-      <td>${pctH}</td>
-      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.status??''}">${r.status??'—'}</td>
+      <td class="muted">${fmt.ts(r.dataExecucao??r.DataExecucao)}</td>
+      <td>${fmt.badge(n._estado)}</td>
+      <td><strong>${n._banco}</strong></td>
+      <td>${fmt.badgeEst(n._est)}</td>
+      <td style="font-size:11px;white-space:nowrap">${fmt.tipoOpIcon(n._op)}</td>
+      <td class="muted" style="font-size:11px">${r.ciclo??r.Ciclo??'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${arquivo}">${arquivo}</td>
+      <td>${fmt.n(dadosGB)}</td>
+      <td>${fmt.n(logGB)}</td>
+      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
     </tr>`;
   }).join('');
 }
@@ -773,13 +748,12 @@ async function carregarTudo() {
   document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
   await carregarBancos();
   await carregarGrafico();
-  await carregarHistorico(); // carrega todosHistorico primeiro
-  carregarResumo();          // deriva os cards a partir do todosHistorico
+  await carregarHistorico();
+  carregarResumo();
 }
 
 carregarTudo();
 setInterval(carregarTudo, 120_000);
-// Reavalia alertas de ciclo a cada minuto sem novo fetch
 setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
 </script>
 </body>
