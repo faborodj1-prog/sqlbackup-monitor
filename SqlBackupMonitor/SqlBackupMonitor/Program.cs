@@ -209,9 +209,19 @@ app.MapGet("/api/resumo", async () =>
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/tamanho?banco=food&dias=30 — série temporal para gráfico
 // ════════════════════════════════════════════════════════════════════════════
-app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30) =>
+app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30, string? de = null, string? ate = null) =>
 {
     await using var conn = new NpgsqlConnection(connStr);
+
+    // Se de/ate informados, usa intervalo explícito; senão usa janela de N dias
+    var usaIntervalo = !string.IsNullOrWhiteSpace(de) || !string.IsNullOrWhiteSpace(ate);
+    DateTime dtDe  = usaIntervalo && !string.IsNullOrWhiteSpace(de)
+                        ? DateTime.Parse(de)
+                        : DateTime.UtcNow.AddDays(-dias);
+    DateTime dtAte = usaIntervalo && !string.IsNullOrWhiteSpace(ate)
+                        ? DateTime.Parse(ate).AddDays(1).AddSeconds(-1) // até 23:59:59 do dia
+                        : DateTime.UtcNow;
+
     var rows = await conn.QueryAsync(@"
         SELECT
             DATE_TRUNC('hour', ""DataExecucao"") AS hora,
@@ -222,11 +232,12 @@ app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30) =>
             MAX(""StatusLimite"")                  AS status_limite
         FROM ""BackupLogs""
         WHERE ""TamanhoDadosGB"" > 0
-          AND ""DataExecucao"" >= NOW() - (@dias || ' days')::INTERVAL
+          AND ""DataExecucao"" >= @dtDe
+          AND ""DataExecucao"" <= @dtAte
           AND (@banco::TEXT IS NULL OR ""BancoNome"" = @banco)
         GROUP BY DATE_TRUNC('hour', ""DataExecucao""), ""BancoNome""
         ORDER BY hora ASC",
-        new { banco, dias });
+        new { banco, dtDe, dtAte });
     return Results.Ok(rows);
 });
 
