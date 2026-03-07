@@ -249,7 +249,7 @@
         </div>
         <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">
           <span><span style="color:var(--accent);">●</span> Dados (GB)</span>
-          <span><span style="color:var(--accent2);">●</span> Log (GB)</span>
+          <span><span style="color:var(--ok);">●</span> Log (GB)</span>
         </div>
       </div>
       <div class="chart-canvas-wrap"><canvas id="chartTamanho"></canvas></div>
@@ -537,7 +537,21 @@ function carregarResumo() {
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
-  const sorted = [...rows].sort((a,b) => nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR'));
+  // Prioridade: erro/ciclo-atrasado → alerta → ok (dentro de cada grupo: alfabético)
+  const prioCard = r => {
+    const n = nr(r);
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    const cicloAtrasado = n._prox ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000) : false;
+    const cls = (n._estado||'').toLowerCase();
+    if (cls === 'erro' || cicloAtrasado) return 0;
+    if (cls !== 'ok' && cls !== '') return 1;
+    return 2;
+  };
+  const sorted = [...rows].sort((a,b) => {
+    const pa = prioCard(a), pb = prioCard(b);
+    if (pa !== pb) return pa - pb;
+    return nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR');
+  });
   el.innerHTML = sorted.map(r => {
     const n   = nr(r);
     const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
@@ -578,8 +592,13 @@ function renderCards(rows) {
 async function carregarGrafico() {
   const banco = document.getElementById('selectBancoGrafico').value;
   const dias  = document.getElementById('selectDias').value;
+  // Respeita filtros de data ativos (fDe / fAte)
+  const de  = document.getElementById('fDe').value;
+  const ate = document.getElementById('fAte').value;
   try {
-    const url  = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+    let url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+    if (de)  url += `&de=${de}`;
+    if (ate) url += `&ate=${ate}`;
     const rows = await (await fetch(url)).json();
     const labels  = rows.map(r => fmt.tsm(r.hora));
     const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
@@ -592,7 +611,7 @@ async function carregarGrafico() {
         labels,
         datasets: [
           { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
-          { label:'Log (GB)',   data:logGb,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.06)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
+          { label:'Log (GB)',   data:logGb,   borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.06)',  borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
         ]
       },
       options: {
