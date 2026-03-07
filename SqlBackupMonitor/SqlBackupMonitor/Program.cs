@@ -209,22 +209,31 @@ app.MapGet("/api/resumo", async () =>
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/tamanho?banco=food&dias=30 — série temporal para gráfico
 // ════════════════════════════════════════════════════════════════════════════
-app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30, string? de = null, string? ate = null) =>
+// GET /api/tamanho?cliente=08857449000182&banco=bo&dias=30&de=2026-01-01&ate=2026-03-31
+// Quando `cliente` informado, filtra por CNPJ (normalizado) — ignora `banco`
+// Quando `de`/`ate` informados, usa intervalo explícito; senão usa janela de `dias`
+app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30,
+                                  string? de = null, string? ate = null,
+                                  string? cliente = null) =>
 {
     await using var conn = new NpgsqlConnection(connStr);
 
-    // Se de/ate informados, usa intervalo explícito; senão usa janela de N dias
     var usaIntervalo = !string.IsNullOrWhiteSpace(de) || !string.IsNullOrWhiteSpace(ate);
     DateTime dtDe  = usaIntervalo && !string.IsNullOrWhiteSpace(de)
                         ? DateTime.Parse(de)
                         : DateTime.UtcNow.AddDays(-dias);
     DateTime dtAte = usaIntervalo && !string.IsNullOrWhiteSpace(ate)
-                        ? DateTime.Parse(ate).AddDays(1).AddSeconds(-1) // até 23:59:59 do dia
+                        ? DateTime.Parse(ate).AddDays(1).AddSeconds(-1)
                         : DateTime.UtcNow;
+
+    // Normaliza CNPJ para comparação (remove pontos, traços, barras e espaços)
+    var cnpjNorm = string.IsNullOrWhiteSpace(cliente) ? null
+        : new string(cliente.Where(char.IsDigit).ToArray());
 
     var rows = await conn.QueryAsync(@"
         SELECT
             DATE_TRUNC('hour', ""DataExecucao"") AS hora,
+            ""ClienteNome""                       AS cliente,
             ""BancoNome""                         AS banco,
             AVG(""TamanhoDadosGB"")               AS dados_gb,
             AVG(""TamanhoLogGB"")                 AS log_gb,
@@ -234,10 +243,14 @@ app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30, string? d
         WHERE ""TamanhoDadosGB"" > 0
           AND ""DataExecucao"" >= @dtDe
           AND ""DataExecucao"" <= @dtAte
-          AND (@banco::TEXT IS NULL OR ""BancoNome"" = @banco)
-        GROUP BY DATE_TRUNC('hour', ""DataExecucao""), ""BancoNome""
+          AND (
+            @cnpjNorm::TEXT IS NULL
+            OR REGEXP_REPLACE(""ClienteCNPJ"", '[^0-9]', '', 'g') = @cnpjNorm
+          )
+          AND (@cnpjNorm::TEXT IS NOT NULL OR @banco::TEXT IS NULL OR ""BancoNome"" = @banco)
+        GROUP BY DATE_TRUNC('hour', ""DataExecucao""), ""ClienteNome"", ""BancoNome""
         ORDER BY hora ASC",
-        new { banco, dtDe, dtAte });
+        new { banco, dtDe, dtAte, cnpjNorm });
     return Results.Ok(rows);
 });
 
