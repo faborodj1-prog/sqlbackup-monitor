@@ -230,41 +230,44 @@ app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30,
     var cnpjNorm = string.IsNullOrWhiteSpace(cliente) ? null
         : new string(cliente.Where(char.IsDigit).ToArray());
 
-    // Monta SQL dinamicamente para evitar problemas com parâmetros NULL no Dapper+Postgres
-    var whereExtra = new System.Text.StringBuilder();
-    var prms = new Dapper.DynamicParameters();
-    prms.Add("dtDe",  dtDe);
-    prms.Add("dtAte", dtAte);
+    // Monta SQL dinamicamente — sem parâmetros NULL para evitar crash no Dapper+Postgres
+    string sqlFiltro;
+    object sqlParams;
 
     if (!string.IsNullOrWhiteSpace(cnpjNorm))
     {
-        whereExtra.Append(" AND REGEXP_REPLACE(\"ClienteCNPJ\", '[^0-9]', '', 'g') = @cnpjNorm");
-        prms.Add("cnpjNorm", cnpjNorm);
+        sqlFiltro  = @"AND REGEXP_REPLACE(""ClienteCNPJ"", '[^0-9]', '', 'g') = @cnpjNorm";
+        sqlParams  = new { dtDe, dtAte, cnpjNorm };
     }
     else if (!string.IsNullOrWhiteSpace(banco))
     {
-        whereExtra.Append(" AND \"BancoNome\" = @banco");
-        prms.Add("banco", banco);
+        sqlFiltro  = @"AND ""BancoNome"" = @banco";
+        sqlParams  = new { dtDe, dtAte, banco };
+    }
+    else
+    {
+        sqlFiltro  = "";
+        sqlParams  = new { dtDe, dtAte };
     }
 
     var sql = $@"
         SELECT
-            DATE_TRUNC('hour', \"DataExecucao\") AS hora,
-            \"ClienteNome\"                       AS cliente,
-            \"BancoNome\"                         AS banco,
-            AVG(\"TamanhoDadosGB\")               AS dados_gb,
-            AVG(\"TamanhoLogGB\")                 AS log_gb,
-            AVG(\"PercentualExpress\")             AS percentual_express,
-            MAX(\"StatusLimite\")                  AS status_limite
-        FROM \"BackupLogs\"
-        WHERE \"TamanhoDadosGB\" > 0
-          AND \"DataExecucao\" >= @dtDe
-          AND \"DataExecucao\" <= @dtAte
-          {whereExtra}
-        GROUP BY DATE_TRUNC('hour', \"DataExecucao\"), \"ClienteNome\", \"BancoNome\"
+            DATE_TRUNC('hour', ""DataExecucao"") AS hora,
+            ""ClienteNome""                       AS cliente,
+            ""BancoNome""                         AS banco,
+            AVG(""TamanhoDadosGB"")               AS dados_gb,
+            AVG(""TamanhoLogGB"")                 AS log_gb,
+            AVG(""PercentualExpress"")             AS percentual_express,
+            MAX(""StatusLimite"")                  AS status_limite
+        FROM ""BackupLogs""
+        WHERE ""TamanhoDadosGB"" > 0
+          AND ""DataExecucao"" >= @dtDe
+          AND ""DataExecucao"" <= @dtAte
+          {sqlFiltro}
+        GROUP BY DATE_TRUNC('hour', ""DataExecucao""), ""ClienteNome"", ""BancoNome""
         ORDER BY hora ASC";
 
-    var rows = await conn.QueryAsync(sql, prms);
+    var rows = await conn.QueryAsync(sql, sqlParams);
     return Results.Ok(rows);
 });
 
