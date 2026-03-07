@@ -219,12 +219,17 @@ app.MapGet("/api/tamanho", async (string? banco = null, int dias = 30,
     await using var conn = new NpgsqlConnection(connStr);
 
     var usaIntervalo = !string.IsNullOrWhiteSpace(de) || !string.IsNullOrWhiteSpace(ate);
-    DateTime dtDe  = usaIntervalo && !string.IsNullOrWhiteSpace(de)
-                        ? DateTime.Parse(de)
-                        : DateTime.UtcNow.AddDays(-dias);
-    DateTime dtAte = usaIntervalo && !string.IsNullOrWhiteSpace(ate)
-                        ? DateTime.Parse(ate).AddDays(1).AddSeconds(-1)
-                        : DateTime.UtcNow;
+    // DateTime.SpecifyKind(Unspecified) — Postgres usa timestamp without time zone
+    DateTime dtDe  = DateTime.SpecifyKind(
+        usaIntervalo && !string.IsNullOrWhiteSpace(de)
+            ? DateTime.Parse(de)
+            : DateTime.UtcNow.AddDays(-dias),
+        DateTimeKind.Unspecified);
+    DateTime dtAte = DateTime.SpecifyKind(
+        usaIntervalo && !string.IsNullOrWhiteSpace(ate)
+            ? DateTime.Parse(ate).AddDays(1).AddSeconds(-1)
+            : DateTime.UtcNow,
+        DateTimeKind.Unspecified);
 
     // Normaliza CNPJ para comparação (remove pontos, traços, barras e espaços)
     var cnpjNorm = string.IsNullOrWhiteSpace(cliente) ? null
