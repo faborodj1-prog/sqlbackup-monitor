@@ -234,14 +234,25 @@
 
   <!-- GRÁFICO -->
   <section>
-    <div class="section-title">Tamanho do Banco ao Longo do Tempo</div>
+    <div class="section-title" id="chartTitle">Tamanho do Banco ao Longo do Tempo</div>
     <div class="chart-container" id="chartContainer">
       <div class="chart-toolbar">
-        <div style="display:flex;gap:10px;align-items:center;">
+        <!-- Modo sem seleção: selects de banco e período -->
+        <div id="chartToolbarNormal" style="display:flex;gap:10px;align-items:center;">
           <select id="selectBancoGrafico" onchange="carregarGrafico()">
             <option value="">Todos os bancos</option>
           </select>
           <select id="selectDias" onchange="carregarGrafico()">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </div>
+        <!-- Modo com cliente selecionado -->
+        <div id="chartToolbarCliente" style="display:none;align-items:center;gap:10px;">
+          <span style="font-family:var(--ui);font-weight:800;font-size:13px;color:var(--text)" id="chartClienteLabel">—</span>
+          <span style="font-size:10px;color:var(--muted)" id="chartBancoLabel"></span>
+          <select id="selectDias2" onchange="document.getElementById('selectDias').value=this.value;carregarGrafico()">
             <option value="7">Últimos 7 dias</option>
             <option value="30" selected>Últimos 30 dias</option>
             <option value="90">Últimos 90 dias</option>
@@ -436,10 +447,12 @@ function onCardClick(el) {
   document.getElementById('filterBanner').classList.add('visible');
   document.getElementById('chartContainer').classList.add('hl');
   document.getElementById('tableContainer').classList.add('hl');
-  const sg = document.getElementById('selectBancoGrafico');
-  for (let i = 0; i < sg.options.length; i++) {
-    if (sg.options[i].value === bancoNome) { sg.selectedIndex = i; break; }
-  }
+  // Atualiza toolbar do gráfico para modo "cliente selecionado"
+  document.getElementById('chartToolbarNormal').style.display  = 'none';
+  document.getElementById('chartToolbarCliente').style.display = 'flex';
+  document.getElementById('chartClienteLabel').textContent = clienteNome;
+  document.getElementById('chartBancoLabel').textContent   = '🗄 ' + bancoNome;
+  document.getElementById('chartTitle').textContent = 'Evolução — ' + clienteNome;
   carregarGrafico();
   aplicarFiltroCliente();
   setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 60);
@@ -453,6 +466,9 @@ function desselecionarCard() {
   document.getElementById('tableContainer').classList.remove('hl');
   document.getElementById('selectBancoGrafico').selectedIndex = 0;
   document.getElementById('filtroBanco').selectedIndex = 0;
+  document.getElementById('chartToolbarNormal').style.display  = 'flex';
+  document.getElementById('chartToolbarCliente').style.display = 'none';
+  document.getElementById('chartTitle').textContent = 'Tamanho do Banco ao Longo do Tempo';
   carregarGrafico();
   carregarHistorico();
 }
@@ -591,20 +607,31 @@ function renderCards(rows) {
 }
 
 async function carregarGrafico() {
-  const banco = document.getElementById('selectBancoGrafico').value;
-  const dias  = document.getElementById('selectDias').value;
-  // Respeita filtros de data ativos (fDe / fAte)
-  const de  = document.getElementById('fDe').value;
-  const ate = document.getElementById('fAte').value;
+  const dias = document.getElementById('selectDias').value;
+  const de   = document.getElementById('fDe').value;
+  const ate  = document.getElementById('fAte').value;
   try {
-    // Se há filtro de datas: usa de/ate; senão usa janela de dias
     let url;
-    if (de || ate) {
-      url = `/api/tamanho?dias=9999${banco?'&banco='+encodeURIComponent(banco):''}`;
-      if (de)  url += `&de=${de}`;
-      if (ate) url += `&ate=${ate}`;
+    if (cardSelecionado) {
+      // Modo cliente: filtra por CNPJ — ignora o select de banco
+      const cnpj = cardSelecionado.clienteCNPJ || '';
+      if (de || ate) {
+        url = `/api/tamanho?dias=9999&cliente=${encodeURIComponent(cnpj)}`;
+        if (de)  url += `&de=${de}`;
+        if (ate) url += `&ate=${ate}`;
+      } else {
+        url = `/api/tamanho?dias=${dias}&cliente=${encodeURIComponent(cnpj)}`;
+      }
     } else {
-      url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+      // Modo geral: filtra por banco (select)
+      const banco = document.getElementById('selectBancoGrafico').value;
+      if (de || ate) {
+        url = `/api/tamanho?dias=9999${banco?'&banco='+encodeURIComponent(banco):''}`;
+        if (de)  url += `&de=${de}`;
+        if (ate) url += `&ate=${ate}`;
+      } else {
+        url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+      }
     }
     const rows = await (await fetch(url)).json();
     // Se não há dados, mostra gráfico vazio mas não remove o canvas
