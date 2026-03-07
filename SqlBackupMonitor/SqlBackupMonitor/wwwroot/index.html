@@ -570,12 +570,13 @@ function renderCards(rows) {
         ${fmt.badge(n._estado)}
       </div>
       <div class="card-doc">${n._doc}</div>
-      <div class="card-banco-sub">🗄 ${n._banco} &nbsp;${fmt.badgeEst(n._est)}</div>
+      <div class="card-banco-sub">🗄 ${n._banco}</div>
+      <div style="margin-bottom:8px;">${fmt.badgeEst(n._est)}&nbsp;<span style="font-size:9px;color:var(--muted);">modelo SQL: ${r.recovery??r.Recovery??'—'}</span></div>
       <div class="card-metrics">
         <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
         <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB||r.TamanhoLogGB)} GB</value></div>
         <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??r.Servidor??'—'}</value></div>
-        <div class="metric"><label>Recovery</label><value style="font-size:11px">${r.recovery??r.Recovery??'—'}</value></div>
+        <div class="metric"><label>Estratégia</label><value style="font-size:11px">${fmt.badgeEst(n._est)}</value></div>
       </div>
       ${isEx ? `
       <div class="express-bar">
@@ -596,11 +597,18 @@ async function carregarGrafico() {
   const de  = document.getElementById('fDe').value;
   const ate = document.getElementById('fAte').value;
   try {
-    let url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
-    if (de)  url += `&de=${de}`;
-    if (ate) url += `&ate=${ate}`;
+    // Se há filtro de datas: usa de/ate; senão usa janela de dias
+    let url;
+    if (de || ate) {
+      url = `/api/tamanho?dias=9999${banco?'&banco='+encodeURIComponent(banco):''}`;
+      if (de)  url += `&de=${de}`;
+      if (ate) url += `&ate=${ate}`;
+    } else {
+      url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+    }
     const rows = await (await fetch(url)).json();
-    const labels  = rows.map(r => fmt.tsm(r.hora));
+    // Se não há dados, mostra gráfico vazio mas não remove o canvas
+    const labels  = rows.length ? rows.map(r => fmt.tsm(r.hora)) : [];
     const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
     const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
     const ctx = document.getElementById('chartTamanho').getContext('2d');
