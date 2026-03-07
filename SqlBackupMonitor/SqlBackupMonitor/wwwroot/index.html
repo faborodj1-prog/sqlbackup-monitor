@@ -633,7 +633,16 @@ async function carregarGrafico() {
         url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
       }
     }
-    const rows = await (await fetch(url)).json();
+    const rawRows = await (await fetch(url)).json();
+    // Agrega por hora — quando há múltiplos bancos/clientes retornados, soma os GB
+    const horaMap = new Map();
+    (Array.isArray(rawRows) ? rawRows : []).forEach(r => {
+      const h = r.hora;
+      if (!horaMap.has(h)) horaMap.set(h, { hora: h, dados_gb: 0, log_gb: 0 });
+      horaMap.get(h).dados_gb += Number(r.dados_gb || 0);
+      horaMap.get(h).log_gb   += Number(r.log_gb   || 0);
+    });
+    const rows = [...horaMap.values()].sort((a,b) => a.hora < b.hora ? -1 : 1);
     // Se não há dados, mostra gráfico vazio mas não remove o canvas
     const labels  = rows.length ? rows.map(r => fmt.tsm(r.hora)) : [];
     const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
