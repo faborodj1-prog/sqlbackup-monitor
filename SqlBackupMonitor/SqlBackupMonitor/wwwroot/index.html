@@ -67,7 +67,11 @@
   .card.ok::before             { background:var(--ok); }
   .card.erro::before           { background:var(--erro); }
   .card.alerta::before         { background:var(--alerta); }
-  .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.04); }
+  .card.ciclo-atrasado{border-color:#f97316!important;background:rgba(249,115,22,.06);animation:card-pulse-orange 3s ease-in-out infinite;}
+  .card.anom-vermelho{border-color:#ef4444!important;background:rgba(239,68,68,.07);animation:card-pulse-red 2.5s ease-in-out infinite;}
+  .card.open.ciclo-atrasado,.card.open.anom-vermelho{animation:none;}
+  @keyframes card-pulse-orange{0%,100%{box-shadow:0 0 0 1px rgba(249,115,22,.2)}50%{box-shadow:0 0 0 3px rgba(249,115,22,.5)}}
+  @keyframes card-pulse-red{0%,100%{box-shadow:0 0 0 1px rgba(239,68,68,.2)}50%{box-shadow:0 0 0 3px rgba(239,68,68,.5)}}
   .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
   .card-ciclo { display:flex; align-items:center; gap:5px; font-size:9px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--muted); flex-wrap:wrap; }
   .ciclo-ok   { color:var(--ok); }
@@ -165,6 +169,16 @@
   .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
   @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
+
+  .card-body{max-height:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s;opacity:0;}
+  .card.open .card-body{max-height:500px;opacity:1;border-top:1px solid var(--border);}
+  .expand-hint{font-size:9px;color:var(--muted);text-align:center;padding:2px 0 7px;opacity:.35;transition:opacity .2s;}
+  .card:hover .expand-hint{opacity:.65;}
+  .card.open .expand-hint{display:none;}
+  .anom-detail{margin-bottom:8px;padding:6px 9px;border-radius:4px;font-size:10px;line-height:1.5;}
+  .anom-detail.laranja{background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#f97316;}
+  .anom-detail.vermelho{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+  .card-tempo{font-size:9px;color:var(--muted);opacity:.5;margin-left:3px;}
 </style>
 </head>
 <body>
@@ -220,7 +234,8 @@
 
   <!-- CARDS STATUS -->
   <section>
-    <div class="section-title">Status Atual por Banco</div>
+    <div class="section-title">Status Atual por Banco <span style="font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)">— clique para expandir</span></div>
+    <div style="display:flex;gap:12px;align-items:center;font-size:10px;color:var(--muted);margin-bottom:10px"><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></span>Normal</span><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--laranja);display:inline-block"></span>Alerta</span><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--erro);display:inline-block"></span>Crítico</span></div>
     <div class="cards-grid" id="cardsContainer">
       <div class="loader"><div class="spin"></div> Carregando...</div>
     </div>
@@ -376,6 +391,7 @@ const fmt = {
       'MudancaParaSimple'  : '⚙ →Simple',
       'MudancaParaFull'    : '⚙ →Full',
       'FalhaFullPreSimple' : '❌ Falha PreSimple',
+      'RebuildAdiado'      : '🔧⏳ Rebuild Adiado',
     };
     return m[t] ?? (t || '—');
   },
@@ -430,12 +446,28 @@ let todosHistorico = [];
 let clienteAtual   = null;
 let cardSelecionado = null;
 
-function onCardClick(el) {
+function onCardClick(el, event) {
+  if (event) event.stopPropagation();
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
   const _key        = el.dataset.key;
-  if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); return; }
+  const jaAberto    = el.classList.contains('open');
+
+  // Fecha todos os outros
+  document.querySelectorAll('#cardsContainer .card.open').forEach(c => {
+    if (c !== el) c.classList.remove('open');
+  });
+
+  // Segundo clique: fecha
+  if (jaAberto) {
+    el.classList.remove('open');
+    if (cardSelecionado && cardSelecionado._key === _key) desselecionarCard();
+    return;
+  }
+
+  // Abre e seleciona
+  el.classList.add('open');
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
     const isMe = c.dataset.key === _key;
@@ -447,7 +479,6 @@ function onCardClick(el) {
   document.getElementById('filterBanner').classList.add('visible');
   document.getElementById('chartContainer').classList.add('hl');
   document.getElementById('tableContainer').classList.add('hl');
-  // Atualiza toolbar do gráfico para modo "cliente selecionado"
   document.getElementById('chartToolbarNormal').style.display  = 'none';
   document.getElementById('chartToolbarCliente').style.display = 'flex';
   document.getElementById('chartClienteLabel').textContent = clienteNome;
@@ -578,15 +609,22 @@ function renderCards(rows) {
     const fc   = fmt.exprColor(pct);
     const isSel = cardSelecionado && n._key === cardSelecionado._key;
     const isDim = cardSelecionado && !isSel;
-    return `<div class="card ${cls}${cicloAtrasado?' ciclo-atrasado':''}${isSel?' selected':''}${isDim?' dimmed':''}"
+    const tempo=fmt.tempoRelativo(n._dt);
+    const anomDetailHtml=anom?\'<div class="anom-detail \'+anom.nivel+\'"><b>\'+(anom.nivel===\'vermelho\'?\'🔴 Crítico\':\'🟠 Alerta\')+\':</b> \'+anom.motivo+\'</div>\':\'\';
+    const tempoTag=tempo?\'<span class="card-tempo">\'+tempo+\'</span>\':\'\';
+
+    return `<div class="card ${cls}${anom?(anom.nivel==='vermelho'?' anom-vermelho':' ciclo-atrasado'):''}${isSel?' selected':''}${isDim?' dimmed':''}"
          data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
-         onclick="onCardClick(this)">
+         onclick="onCardClick(this,event)">
       <div class="card-header">
         <div class="card-cliente">${n._nome}</div>
         ${fmt.badge(n._estado)}
       </div>
       <div class="card-doc">${n._doc}</div>
-      <div class="card-banco-sub">🗄 ${n._banco}</div>
+      <div class="card-banco-sub">🗄 ${n._banco} ${tempoTag}</div>
+      <div class="expand-hint">▸ clique para expandir</div>
+      <div class="card-body">
+      ${anomDetailHtml}
       <div style="margin-bottom:8px;">${fmt.badgeEst(n._est)}&nbsp;<span style="font-size:9px;color:var(--muted);">modelo SQL: ${r.recovery??r.Recovery??'—'}</span></div>
       <div class="card-metrics">
         <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
@@ -602,6 +640,7 @@ function renderCards(rows) {
       <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
       ${fmt.cardCiclo(r)}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
+      </div>
     </div>`;
   }).join('');
 }
