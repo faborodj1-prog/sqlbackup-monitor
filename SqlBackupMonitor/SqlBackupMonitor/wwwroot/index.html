@@ -67,7 +67,11 @@
   .card.ok::before             { background:var(--ok); }
   .card.erro::before           { background:var(--erro); }
   .card.alerta::before         { background:var(--alerta); }
-  .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.04); }
+  .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.06); animation:card-pulse-orange 3s ease-in-out infinite; }
+  .card.anom-vermelho { border-color:#ef4444 !important; background:rgba(239,68,68,.07); animation:card-pulse-red 2.5s ease-in-out infinite; }
+  .card.open.ciclo-atrasado, .card.open.anom-vermelho { animation:none; }
+  @keyframes card-pulse-orange { 0%,100%{ box-shadow:0 0 0 1px rgba(249,115,22,.2); } 50%{ box-shadow:0 0 0 3px rgba(249,115,22,.5); } }
+  @keyframes card-pulse-red    { 0%,100%{ box-shadow:0 0 0 1px rgba(239,68,68,.2);  } 50%{ box-shadow:0 0 0 3px rgba(239,68,68,.5);  } }
   .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
   .card-ciclo { display:flex; align-items:center; gap:5px; font-size:9px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--muted); flex-wrap:wrap; }
   .ciclo-ok   { color:var(--ok); }
@@ -165,6 +169,16 @@
   .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
   @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
+
+  /* ── collapse/expand ── */
+  .card-body { max-height:0; overflow:hidden; transition:max-height .32s cubic-bezier(.4,0,.2,1), opacity .25s; opacity:0; }
+  .card.open .card-body { max-height:420px; opacity:1; border-top:1px solid var(--border); }
+  .expand-hint { font-size:9px;color:var(--muted);text-align:center;padding:3px 0 7px;opacity:.35;transition:opacity .2s; }
+  .card:hover .expand-hint { opacity:.65; }
+  .card.open .expand-hint { display:none; }
+  .anom-detail { margin-top:7px;padding:6px 9px;border-radius:4px;font-size:10px;line-height:1.5; }
+  .anom-detail.laranja { background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#f97316; }
+  .anom-detail.vermelho { background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444; }
 </style>
 </head>
 <body>
@@ -220,7 +234,12 @@
 
   <!-- CARDS STATUS -->
   <section>
-    <div class="section-title">Status Atual por Banco</div>
+    <div class="section-title">Status Atual por Banco <span style="font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);margin-left:4px">— clique para expandir</span></div>
+    <div style="display:flex;gap:14px;align-items:center;font-size:10px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></span>Normal</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--laranja);display:inline-block"></span>Alerta (ciclo atrasado ou espaço em aviso)</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--erro);display:inline-block"></span>Crítico (erro ou espaço crítico)</span>
+    </div>
     <div class="cards-grid" id="cardsContainer">
       <div class="loader"><div class="spin"></div> Carregando...</div>
     </div>
@@ -376,6 +395,887 @@ const fmt = {
       'MudancaParaSimple'  : '⚙ →Simple',
       'MudancaParaFull'    : '⚙ →Full',
       'FalhaFullPreSimple' : '❌ Falha PreSimple',
+      'RebuildAdiado'      : '🔧⏳ Rebuild Adiado',
+    };
+    return m[t] ?? (t || '—');
+  },
+  cardCls: t => { const k=(t||'').toLowerCase(); return k==='ok'?'ok':k==='erro'?'erro':'alerta'; },
+  exprColor: p => p>=100?'var(--erro)':p>=80?'var(--alerta)':'var(--ok)',
+  date: d => d.toISOString().slice(0,10),
+  cardCiclo: r => {
+    const n = nr(r);
+    if (!n._horas && !n._prox) return '';
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    let statusCiclo = '';
+    if (n._prox) {
+      const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
+      statusCiclo = atrasado
+        ? '<span class="ciclo-late">⚠ atrasado</span>'
+        : '<span class="ciclo-ok">✓</span>';
+    }
+    const freqLabel = n._horas != null
+      ? `<span class="ciclo-freq">🔄 a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}</span>`
+      : '';
+    const proxLabel = n._prox
+      ? `<span class="ciclo-prox">→ ${fmt.tsm(n._prox)}</span>`
+      : '';
+    return `<div class="card-ciclo">${freqLabel}${proxLabel}${statusCiclo}</div>`;
+  },
+};
+
+const norm = s => (s||'').toLowerCase().replace(/[.\-\/\s]/g,'');
+
+function nr(r) {
+  if (!r || typeof r !== 'object') return { _nome:'—',_doc:'',_banco:'—',_estado:'',_msg:'—',_horas:null,_prox:null,_tam:'—',_dt:null,_key:'' };
+  return {
+    ...r,
+    _nome:   r.cliente        ?? r.clienteNome  ?? '—',
+    _doc:    r.clienteCNPJ    ?? '',
+    _banco:  r.banco          ?? r.bancoNome     ?? '—',
+    _estado: r.estado         ?? r.tipoBackup    ?? r.alertaCiclo ?? '',
+    _msg:    r.mensagem       ?? r.status        ?? '—',
+    _horas:  (r.intervalHoras > 0 ? r.intervalHoras : null),
+    _prox:   r.proximaExecucao ?? null,
+    _tam:    r.tamanho        ?? (r.tamanhoDadosGB != null ? (Number(r.tamanhoDadosGB).toFixed(3)+' GB') : '—'),
+    _dt:     r.dataExecucao   ?? null,
+    _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
+    _est:    r.estrategia     ?? r.Estrategia    ?? 'Simple',
+    _op:     r.tipoOperacao   ?? r.TipoOperacao  ?? 'Diferencial',
+  };
+}
+
+let chart = null;
+let todosResumo    = [];
+let todosHistorico = [];
+let clienteAtual   = null;
+let cardSelecionado = null;
+
+function onCardClick(el, event) {
+  if (event) event.stopPropagation();
+  const _key        = el.dataset.key;
+  const bancoNome   = el.dataset.banco;
+  const clienteNome = el.dataset.nome;
+  const clienteCNPJ = el.dataset.doc;
+  const jaAberto    = el.classList.contains('open');
+
+  // fecha todos os outros
+  document.querySelectorAll('#cardsContainer .card.open').forEach(c => {
+    if (c !== el) c.classList.remove('open');
+  });
+
+  if (jaAberto) {
+    el.classList.remove('open');
+    if (cardSelecionado && cardSelecionado._key === _key) desselecionarCard();
+    return;
+  }
+
+  el.classList.add('open');
+  cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
+  document.querySelectorAll('#cardsContainer .card').forEach(c => {
+    const isMe = c.dataset.key === _key;
+    c.classList.toggle('selected', isMe);
+    c.classList.toggle('dimmed', !isMe);
+  });
+  document.getElementById('bannerLabel').innerHTML =
+    '<strong>' + clienteNome + '</strong><span class="filter-chip">🗄 ' + bancoNome + '</span>';
+  document.getElementById('filterBanner').classList.add('visible');
+  document.getElementById('chartContainer').classList.add('hl');
+  document.getElementById('tableContainer').classList.add('hl');
+  document.getElementById('chartToolbarNormal').style.display  = 'none';
+  document.getElementById('chartToolbarCliente').style.display = 'flex';
+  document.getElementById('chartClienteLabel').textContent = clienteNome;
+  document.getElementById('chartBancoLabel').textContent   = '🗄 ' + bancoNome;
+  document.getElementById('chartTitle').textContent = 'Evolução — ' + clienteNome;
+  carregarGrafico();
+  aplicarFiltroCliente();
+  setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 80);
+}
+
+function desselecionarCard() {
+  cardSelecionado = null;
+  document.querySelectorAll('#cardsContainer .card').forEach(c => c.classList.remove('selected','dimmed'));
+  document.getElementById('filterBanner').classList.remove('visible');
+  document.getElementById('chartContainer').classList.remove('hl');
+  document.getElementById('tableContainer').classList.remove('hl');
+  document.getElementById('selectBancoGrafico').selectedIndex = 0;
+  document.getElementById('filtroBanco').selectedIndex = 0;
+  document.getElementById('chartToolbarNormal').style.display  = 'flex';
+  document.getElementById('chartToolbarCliente').style.display = 'none';
+  document.getElementById('chartTitle').textContent = 'Tamanho do Banco ao Longo do Tempo';
+  carregarGrafico();
+  carregarHistorico();
+}
+
+function setPeriodo(p) {
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') { de = ate = fmt.date(hoje); }
+  else if (p === 'mes') { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); ate = fmt.date(hoje); }
+  else { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth()-1, 1)); ate = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 0)); }
+  document.getElementById('fDe').value  = de;
+  document.getElementById('fAte').value = ate;
+  document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
+  document.getElementById(p==='hoje'?'btnHoje':p==='mes'?'btnMes':'btnMesAnt').classList.add('active');
+  aplicarFiltroCliente();
+}
+
+function limparPeriodoBtns() { document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active')); }
+
+function limparFiltros() {
+  document.getElementById('fCliente').value = '';
+  document.getElementById('fDe').value = '';
+  document.getElementById('fAte').value = '';
+  limparPeriodoBtns();
+  desselecionarCard();
+}
+
+function aplicarFiltroCliente() {
+  const cli = norm(document.getElementById('fCliente').value);
+  const de  = document.getElementById('fDe').value;
+  const ate = document.getElementById('fAte').value;
+
+  const passaData = (r) => {
+    const n = nr(r);
+    if (!de && !ate) return true;
+    const dt = new Date(n._dt);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    return true;
+  };
+
+  const cardsFiltrados = todosResumo.filter(r => {
+    const n = nr(r);
+    if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false;
+    return passaData(r);
+  });
+  renderCards(cardsFiltrados);
+
+  const histFiltrado = todosHistorico.filter(r => {
+    const n = nr(r);
+    if (cardSelecionado) { if (n._key !== cardSelecionado._key) return false; }
+    else { if (cli && !n._key.includes(cli) && !norm(n._nome).includes(cli)) return false; }
+    return passaData(r);
+  });
+  renderHistorico(histFiltrado);
+}
+
+async function carregarBancos() {
+  try {
+    const bancos = await (await fetch('/api/bancos')).json();
+    ['filtroBanco','selectBancoGrafico'].forEach(id => {
+      const sel = document.getElementById(id);
+      const first = sel.options[0];
+      sel.innerHTML = ''; sel.appendChild(first);
+      bancos.forEach(b => { const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
+    });
+  } catch(e) { console.error(e); }
+}
+
+function carregarResumo() {
+  const porCliente = new Map();
+  todosHistorico.forEach(r => {
+    const n = nr(r);
+    if (!n._key) return;
+    const atual = porCliente.get(n._key);
+    if (!atual || new Date(n._dt) > new Date(nr(atual)._dt)) porCliente.set(n._key, r);
+  });
+  todosResumo = [...porCliente.values()];
+  aplicarFiltroCliente();
+}
+
+function renderCards(rows) {
+  const el = document.getElementById('cardsContainer');
+  if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
+  // Prioridade: erro/ciclo-atrasado → alerta → ok (dentro de cada grupo: alfabético)
+  const prioCard = r => {
+    const n = nr(r);
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    const cicloAtrasado = n._prox ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000) : false;
+    const cls = (n._estado||'').toLowerCase();
+    if (cls === 'erro' || cicloAtrasado) return 0;
+    if (cls !== 'ok' && cls !== '') return 1;
+    return 2;
+  };
+  const sorted = [...rows].sort((a,b) => {
+    const pa = prioCard(a), pb = prioCard(b);
+    if (pa !== pb) return pa - pb;
+    return nr(a)._nome.localeCompare(nr(b)._nome, 'pt-BR');
+  });
+  el.innerHTML = sorted.map(r => {
+    const n   = nr(r);
+    const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+    const cicloAtrasado = n._prox ? new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000) : false;
+    const cls  = fmt.cardCls(n._estado);
+    const isEx = (r.edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||0);
+    const fc   = fmt.exprColor(pct);
+    const isSel = cardSelecionado && n._key === cardSelecionado._key;
+    const isDim = cardSelecionado && !isSel;
+    return `<div class="card ${cls}${anom ? (anom.nivel==='vermelho' ? ' anom-vermelho' : ' ciclo-atrasado') : ''}${isSel?' selected':''}${isDim?' dimmed':''}"
+         data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
+         onclick="onCardClick(this, event)">
+      <div class="card-header">
+        <div class="card-cliente">${n._nome}</div>
+        ${fmt.badge(n._estado)}
+      </div>
+      <div class="card-doc">${n._doc}</div>
+      <div class="card-banco-sub">🗄 ${n._banco} <span style="font-size:9px;color:var(--muted);opacity:.55">${fmt.tempoRelativo(n._dt)}</span></div>
+      <div class="expand-hint">▸ clique para expandir</div>
+      <div class="card-body">
+      ${anom ? '<div class="anom-detail ' + anom.nivel + '"><b>' + (anom.nivel==='vermelho'?'🔴 Crítico':'🟠 Alerta') + ':</b> ' + anom.motivo + '</div>' : ''}
+      <div style="margin-bottom:8px;">${fmt.badgeEst(n._est)}&nbsp;<span style="font-size:9px;color:var(--muted);">modelo SQL: ${r.recovery??r.Recovery??'—'}</span></div>
+      <div class="card-metrics">
+        <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
+        <div class="metric"><label>Log</label><value>${fmt.n(r.tamanhoLogGB||r.TamanhoLogGB)} GB</value></div>
+        <div class="metric"><label>Servidor</label><value style="font-size:11px">${r.servidor??r.Servidor??'—'}</value></div>
+        <div class="metric"><label>Estratégia</label><value style="font-size:11px">${fmt.badgeEst(n._est)}</value></div>
+      </div>
+      ${isEx ? `
+      <div class="express-bar">
+        <div class="express-bar-label"><span>Express ${fmt.n(pct,1)}% de 10 GB</span><span style="color:${fc}">${r.statusLimite??r.StatusLimite??''}</span></div>
+        <div class="express-track"><div class="express-fill" style="width:${Math.min(pct,100)}%;background:${fc}"></div></div>
+      </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??r.StatusLimite??''}</div>`}
+      <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
+      ${fmt.cardCiclo(r)}
+      <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function carregarGrafico() {
+  const dias = document.getElementById('selectDias').value;
+  const de   = document.getElementById('fDe').value;
+  const ate  = document.getElementById('fAte').value;
+  try {
+    let url;
+    if (cardSelecionado) {
+      // Modo cliente: filtra por CNPJ — ignora o select de banco
+      const cnpj = cardSelecionado.clienteCNPJ || '';
+      if (de || ate) {
+        url = `/api/tamanho?dias=9999&cliente=${encodeURIComponent(cnpj)}`;
+        if (de)  url += `&de=${de}`;
+        if (ate) url += `&ate=${ate}`;
+      } else {
+        url = `/api/tamanho?dias=${dias}&cliente=${encodeURIComponent(cnpj)}`;
+      }
+    } else {
+      // Modo geral: filtra por banco (select)
+      const banco = document.getElementById('selectBancoGrafico').value;
+      if (de || ate) {
+        url = `/api/tamanho?dias=9999${banco?'&banco='+encodeURIComponent(banco):''}`;
+        if (de)  url += `&de=${de}`;
+        if (ate) url += `&ate=${ate}`;
+      } else {
+        url = `/api/tamanho?dias=${dias}${banco?'&banco='+encodeURIComponent(banco):''}`;
+      }
+    }
+    const rawRows = await (await fetch(url)).json();
+    // Agrega por hora — quando há múltiplos bancos/clientes retornados, soma os GB
+    const horaMap = new Map();
+    (Array.isArray(rawRows) ? rawRows : []).forEach(r => {
+      const h = r.hora;
+      if (!horaMap.has(h)) horaMap.set(h, { hora: h, dados_gb: 0, log_gb: 0 });
+      horaMap.get(h).dados_gb += Number(r.dados_gb || 0);
+      horaMap.get(h).log_gb   += Number(r.log_gb   || 0);
+    });
+    const rows = [...horaMap.values()].sort((a,b) => a.hora < b.hora ? -1 : 1);
+    // Se não há dados, mostra gráfico vazio mas não remove o canvas
+    const labels  = rows.length ? rows.map(r => fmt.tsm(r.hora)) : [];
+    const dadosGb = rows.map(r => Number(r.dados_gb||0).toFixed(3));
+    const logGb   = rows.map(r => Number(r.log_gb||0).toFixed(3));
+    const ctx = document.getElementById('chartTamanho').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label:'Dados (GB)', data:dadosGb, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true },
+          { label:'Log (GB)',   data:logGb,   borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.06)',  borderWidth:2, pointRadius:2, pointHoverRadius:5, tension:.3, fill:true }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{display:false},
+          tooltip:{backgroundColor:'#111318',borderColor:'#1e2128',borderWidth:1,titleColor:'#e2e6f0',bodyColor:'#9ca3af',padding:10,
+            titleFont:{family:"'JetBrains Mono',monospace",size:11},bodyFont:{family:"'JetBrains Mono',monospace",size:11}} },
+        scales:{
+          x:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8,maxRotation:0},grid:{color:'#1e2128'}},
+          y:{ticks:{color:'#6b7280',font:{family:"'JetBrains Mono',monospace",size:10},callback:v=>v+' GB'},grid:{color:'#1e2128'}}
+        }
+      }
+    });
+  } catch(e) { console.error('Gráfico:', e); }
+}
+
+async function carregarHistorico() {
+  const tipo       = document.getElementById('filtroTipo').value;
+  const limit      = document.getElementById('filtroLimit').value;
+  const estrategia = document.getElementById('filtroEstrategia').value;
+  const banco      = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
+  document.getElementById('tabelaHistorico').innerHTML=
+    `<tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
+  try {
+    let url = `/api/historico?limit=${limit}`;
+    if (tipo)       url += `&tipo=${encodeURIComponent(tipo)}`;
+    if (banco)      url += `&banco=${encodeURIComponent(banco)}`;
+    if (estrategia) url += `&estrategia=${encodeURIComponent(estrategia)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    todosHistorico = Array.isArray(data) ? data : (data.historico ?? data.data ?? data.registros ?? data.items ?? []);
+    if (!Array.isArray(todosHistorico)) todosHistorico = [];
+    aplicarFiltroCliente();
+  } catch(e) {
+    console.error('Histórico:', e);
+    document.getElementById('tabelaHistorico').innerHTML=
+      `<tr><td colspan="11" class="loader" style="color:var(--erro)">Erro ao carregar histórico.</td></tr>`;
+  }
+}
+
+function renderHistorico(rows) {
+  const tbody = document.getElementById('tabelaHistorico');
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="11" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
+  const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+  tbody.innerHTML = rows.map(r => {
+    const n    = nr(r);
+    const isEx = (r.edicao||r.Edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||r.PercentualExpress||0);
+    const dadosGB = r.tamanhoDadosGB ?? r.TamanhoDadosGB;
+    const logGB   = r.tamanhoLogGB   ?? r.TamanhoLogGB;
+    const freqLabel = n._horas != null ? `a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}` : '—';
+    let proxHtml = '—';
+    if (n._prox) {
+      const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
+      proxHtml = fmt.tsm(n._prox) + (atrasado ? ' <span style="color:#f97316;font-weight:700">⚠</span>' : '');
+    }
+    return `<tr onclick="abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})">
+      <td class="muted">${fmt.ts(n._dt)}</td>
+      <td>${fmt.badge(n._estado)}</td>
+      <td><strong>${n._nome}</strong></td>
+      <td class="muted">${n._banco}</td>
+      <td>${fmt.badgeEst(n._est)}</td>
+      <td style="font-size:11px;white-space:nowrap">${fmt.tipoOpIcon(n._op)}</td>
+      <td class="muted" style="font-size:11px;white-space:nowrap">${freqLabel}</td>
+      <td class="muted" style="font-size:11px;white-space:nowrap">${proxHtml}</td>
+      <td class="muted" style="font-size:11px">${fmt.n(dadosGB)}</td>
+      <td class="muted" style="font-size:11px">${fmt.n(logGB)}</td>
+      <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirCliente(nome, doc) {
+  clienteAtual = { nome, doc };
+  document.getElementById('modalTitulo').textContent = nome || 'Cliente';
+  document.getElementById('modalChips').innerHTML =
+    `<div class="chip">👤 <b>${nome||'—'}</b></div><div class="chip">📄 <b>${doc||'—'}</b></div>`;
+  setModalPeriodo('semana');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function fecharModal() { document.getElementById('overlay').classList.remove('open'); clienteAtual=null; }
+function fecharOverlay(e) { if(e.target===document.getElementById('overlay')) fecharModal(); }
+
+function setModalPeriodo(p) {
+  const hoje = new Date();
+  let de, ate;
+  if (p === 'hoje') { de = ate = fmt.date(hoje); }
+  else if (p === 'semana') {
+    const dow = hoje.getDay();
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - (dow===0?6:dow-1));
+    de = fmt.date(seg); ate = fmt.date(hoje);
+  } else { de = fmt.date(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); ate = fmt.date(hoje); }
+  document.getElementById('mDe').value  = de;
+  document.getElementById('mAte').value = ate;
+  document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(p==='hoje'?'mBtnHoje':p==='semana'?'mBtnSemana':'mBtnMes').classList.add('active');
+  renderModalTabela();
+}
+
+function limparModalBtns() { document.querySelectorAll('.modal-period button').forEach(b=>b.classList.remove('active')); }
+
+function renderModalTabela() {
+  if (!clienteAtual) return;
+  const {nome, doc} = clienteAtual;
+  const de  = document.getElementById('mDe').value;
+  const ate = document.getElementById('mAte').value;
+  const regs = todosHistorico.filter(r => {
+    const n = nr(r);
+    if (n._key !== norm(doc) && norm(n._nome) !== norm(nome)) return false;
+    const dt = new Date(r.dataExecucao??r.DataExecucao);
+    if (de  && dt < new Date(de  + 'T00:00:00')) return false;
+    if (ate && dt > new Date(ate + 'T23:59:59')) return false;
+    return true;
+  }).sort((a,b) => new Date(b.dataExecucao??b.DataExecucao)-new Date(a.dataExecucao??a.DataExecucao));
+
+  const total   = regs.length;
+  const okN     = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='ok').length;
+  const erroN   = regs.filter(r=>(nr(r)._estado||'').toLowerCase()==='erro').length;
+  const alertaN = regs.filter(r=>{ const e=(nr(r)._estado||'').toLowerCase(); return e!=='ok'&&e!=='erro'&&e!==''; }).length;
+  document.getElementById('modalStats').innerHTML = `
+    <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--ok)">${okN}</div><div class="stat-l">OK</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--erro)">${erroN}</div><div class="stat-l">Erros</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--alerta)">${alertaN}</div><div class="stat-l">Alertas</div></div>`;
+
+  const tbody = document.getElementById('modalTbody');
+  if (!regs.length) { tbody.innerHTML='<tr><td colspan="10" class="loader">Nenhum registro neste período.</td></tr>'; return; }
+  tbody.innerHTML = regs.map(r => {
+    const n    = nr(r);
+    const isEx = (r.edicao||r.Edicao||'').toLowerCase().includes('express');
+    const pct  = Number(r.percentualExpress||r.PercentualExpress||0);
+    const dadosGB = r.tamanhoDadosGB ?? r.TamanhoDadosGB;
+    const logGB   = r.tamanhoLogGB   ?? r.TamanhoLogGB;
+    const arquivo = r.nomeArquivo ?? r.NomeArquivo ?? '—';
+    return `<tr>
+      <td class="muted">${fmt.ts(r.dataExecucao??r.DataExecucao)}</td>
+      <td>${fmt.badge(n._estado)}</td>
+      <td><strong>${n._banco}</strong></td>
+      <td>${fmt.badgeEst(n._est)}</td>
+      <td style="font-size:11px;white-space:nowrap">${fmt.tipoOpIcon(n._op)}</td>
+      <td class="muted" style="font-size:11px">${r.ciclo??r.Ciclo??'—'}</td>
+      <td class="muted" style="font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${arquivo}">${arquivo}</td>
+      <td>${fmt.n(dadosGB)}</td>
+      <td>${fmt.n(logGB)}</td>
+      <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function carregarTudo() {
+  document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR');
+  await carregarBancos();
+  await carregarGrafico();
+  await carregarHistorico();
+  carregarResumo();
+}
+
+carregarTudo();
+setInterval(carregarTudo, 120_000);
+setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
+</script>
+</body>
+</html>function detectarAnomalia(r) {
+  const n          = nr(r);
+  const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
+  const warnPct    = Number(document.getElementById('cfgExpressWarn')?.value || 80);
+  const critPct    = Number(document.getElementById('cfgExpressCrit')?.value || 95);
+  const isEx       = (r.edicao||'').toLowerCase().includes('express');
+  const pct        = Number(r.percentualExpress || 0);
+  const cls        = (n._estado||'').toLowerCase();
+
+  if (cls === 'erro')
+    return { nivel: 'vermelho', motivo: 'Erro na execução: ' + n._msg };
+  if (isEx && pct >= critPct)
+    return { nivel: 'vermelho', motivo: 'Express: espaço crítico ' + pct.toFixed(1) + '% de 10 GB usado' };
+  if (n._prox && new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000)) {
+    const atrasoMin = Math.round((new Date() - new Date(n._prox)) / 60000);
+    return { nivel: 'laranja', motivo: 'Ciclo atrasado ' + atrasoMin + ' min (tolerância: ' + tolerancia + ' min)' };
+  }
+  if (isEx && pct >= warnPct)
+    return { nivel: 'laranja', motivo: 'Express: espaço em alerta ' + pct.toFixed(1) + '% de 10 GB usado' };
+  return null;
+}
+DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SqlBackup Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:      #0a0c10;
+    --surface: #111318;
+    --border:  #1e2128;
+    --border2: #2a2f3a;
+    --text:    #e2e6f0;
+    --muted:   #6b7280;
+    --ok:      #22c55e;
+    --erro:    #ef4444;
+    --alerta:  #f59e0b;
+    --accent:  #3b82f6;
+    --accent2: #6366f1;
+    --mono:    'JetBrains Mono', monospace;
+    --ui:      'Syne', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
+
+  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; }
+  .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
+  .logo-dot { width:8px; height:8px; background:var(--ok); border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .last-update { color:var(--muted); font-size:11px; }
+  .btn-refresh { background:var(--surface); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer; border-radius:4px; transition:border-color .2s; }
+  .btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
+
+  main { max-width:1400px; margin:0 auto; padding:28px 32px; display:flex; flex-direction:column; gap:28px; }
+
+  .section-title { font-family:var(--ui); font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .fg { display:flex; flex-direction:column; gap:4px; }
+  .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+  .fg input[type=text], .fg input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:12px; padding:5px 10px; border-radius:4px; outline:none; height:30px; }
+  .fg input:focus { border-color:var(--accent); }
+  .fg input[type=text] { width:200px; }
+  .fg input[type=date] { width:140px; color-scheme:dark; }
+  .period-btns { display:flex; gap:6px; align-items:flex-end; }
+  .period-btns button { height:30px; padding:0 12px; background:var(--bg); border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .period-btns button:hover { border-color:var(--accent); color:var(--accent); }
+  .period-btns button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn-clear { height:30px; padding:0 12px; background:transparent; border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .btn-clear:hover { border-color:var(--erro); color:var(--erro); }
+
+  .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; max-height:calc(100vh - 280px); overflow-y:auto; padding-right:4px; }
+  .cards-grid::-webkit-scrollbar { width:4px; }
+  .cards-grid::-webkit-scrollbar-track { background:transparent; }
+  .cards-grid::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 14px; position:relative; overflow:hidden; transition:border-color .2s,transform .2s,opacity .25s; cursor:pointer; user-select:none; }
+  .card:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .card.selected { border-color:var(--accent) !important; box-shadow:0 0 0 2px rgba(59,130,246,.25); transform:translateY(-1px); }
+  .card.dimmed { opacity:.3; filter:saturate(.2); }
+  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .card.ok::before             { background:var(--ok); }
+  .card.erro::before           { background:var(--erro); }
+  .card.alerta::before         { background:var(--alerta); }
+  .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.06); animation:card-pulse-orange 3s ease-in-out infinite; }
+  .card.anom-vermelho { border-color:#ef4444 !important; background:rgba(239,68,68,.07); animation:card-pulse-red 2.5s ease-in-out infinite; }
+  .card.open.ciclo-atrasado, .card.open.anom-vermelho { animation:none; }
+  @keyframes card-pulse-orange { 0%,100%{ box-shadow:0 0 0 1px rgba(249,115,22,.2); } 50%{ box-shadow:0 0 0 3px rgba(249,115,22,.5); } }
+  @keyframes card-pulse-red    { 0%,100%{ box-shadow:0 0 0 1px rgba(239,68,68,.2);  } 50%{ box-shadow:0 0 0 3px rgba(239,68,68,.5);  } }
+  .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
+  .card-ciclo { display:flex; align-items:center; gap:5px; font-size:9px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--muted); flex-wrap:wrap; }
+  .ciclo-ok   { color:var(--ok); }
+  .ciclo-late { color:#f97316; font-weight:700; animation:blink 1.4s infinite; }
+  .ciclo-freq { background:rgba(99,102,241,.15); color:var(--accent2); border-radius:3px; padding:1px 6px; font-weight:600; white-space:nowrap; }
+  .ciclo-prox { color:var(--muted); margin-left:2px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Badge estratégia */
+  .badge-est { font-size:9px; font-weight:700; padding:1px 7px; border-radius:20px; letter-spacing:.4px; white-space:nowrap; }
+  .badge-est.simple { background:rgba(34,197,94,.12);  color:var(--ok); }
+  .badge-est.full   { background:rgba(59,130,246,.15); color:var(--accent); }
+
+  .config-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:11px 18px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:11px; color:var(--muted); }
+  .config-bar strong { color:var(--text); font-size:11px; }
+  .config-field { display:flex; align-items:center; gap:7px; }
+  .config-field label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; }
+  .config-field input[type=number] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:12px; padding:3px 8px; border-radius:4px; outline:none; width:65px; height:26px; }
+  .config-field input:focus { border-color:var(--accent); }
+  .config-sep { width:1px; height:22px; background:var(--border2); }
+
+  .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .card-banco { font-family:var(--ui); font-size:13px; font-weight:600; color:var(--muted); }
+  .badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; letter-spacing:.5px; }
+  .badge.ok     { background:rgba(34,197,94,.15);  color:var(--ok); }
+  .badge.erro   { background:rgba(239,68,68,.15);  color:var(--erro); }
+  .badge.alerta { background:rgba(245,158,11,.15); color:var(--alerta); }
+
+  .card-cliente { font-family:var(--ui); font-size:13px; font-weight:800; color:var(--text); margin-bottom:2px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-doc     { font-size:10px; color:var(--accent); font-weight:600; margin-bottom:4px; letter-spacing:.3px; }
+  .card-banco-sub { font-size:10px; color:var(--muted); margin-bottom:8px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding-top:8px; border-top:1px solid var(--border); }
+  .metric label { display:block; font-size:9px; color:var(--muted); margin-bottom:1px; text-transform:uppercase; letter-spacing:.5px; }
+  .metric value { font-size:12px; font-weight:600; }
+  .express-bar { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .express-bar-label { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-bottom:4px; }
+  .express-track { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .express-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+  .card-ts  { font-size:9px; color:var(--muted); margin-top:6px; opacity:.5; }
+  .card-msg { font-size:9px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .filter-banner { display:none; align-items:center; justify-content:space-between; gap:12px; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:6px; padding:11px 18px; font-size:12px; }
+  .filter-banner.visible { display:flex; }
+  .filter-banner span { color:var(--muted); }
+  .filter-chip { display:inline-block; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:var(--accent); border-radius:20px; padding:1px 10px; font-size:10px; font-weight:600; margin-left:6px; }
+  .btn-deselect { background:transparent; border:1px solid rgba(59,130,246,.35); color:var(--accent); font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:4px; cursor:pointer; white-space:nowrap; transition:all .15s; }
+  .btn-deselect:hover { background:rgba(59,130,246,.12); }
+
+  .chart-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 24px; transition:border-color .25s; }
+  .chart-container.hl { border-color:rgba(59,130,246,.4); }
+  .chart-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+  .chart-canvas-wrap { position:relative; height:240px; }
+  select { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:4px; outline:none; cursor:pointer; }
+  select:focus { border-color:var(--accent); }
+
+  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; transition:border-color .25s; }
+  .table-container.hl { border-color:rgba(59,130,246,.4); }
+  .table-toolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { font-family:var(--ui); font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); white-space:nowrap; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  tbody tr:hover { background:rgba(59,130,246,.05); }
+  tbody tr:last-child { border-bottom:none; }
+  td { padding:8px 14px; font-size:12px; vertical-align:middle; }
+  td.muted { color:var(--muted); font-size:11px; }
+
+  .loader { display:flex; align-items:center; justify-content:center; gap:8px; padding:40px; color:var(--muted); font-size:12px; }
+  .spin { width:14px; height:14px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px; }
+  .overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px; width:min(960px,96vw); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+  .modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+  .modal-header h2 { font-family:var(--ui); font-size:15px; font-weight:800; }
+  .modal-close { background:transparent; border:1px solid var(--border2); color:var(--muted); width:30px; height:30px; border-radius:4px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .modal-close:hover { border-color:var(--erro); color:var(--erro); }
+  .modal-body { padding:18px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px; }
+  .modal-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:var(--bg); border:1px solid var(--border2); border-radius:4px; padding:4px 12px; font-size:11px; color:var(--muted); }
+  .chip b { color:var(--text); }
+  .modal-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px 16px; text-align:center; }
+  .stat-v { font-family:var(--ui); font-size:24px; font-weight:800; }
+  .stat-l { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:1px; text-transform:uppercase; }
+  .modal-period { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .modal-period label { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+  .modal-period input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:4px; height:28px; outline:none; color-scheme:dark; }
+  .modal-period input:focus { border-color:var(--accent); }
+  .modal-period button { height:28px; padding:0 10px; background:var(--bg); border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .modal-period button:hover { border-color:var(--accent); color:var(--accent); }
+  .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
+
+  /* ── collapse/expand ── */
+  .card-body { max-height:0; overflow:hidden; transition:max-height .32s cubic-bezier(.4,0,.2,1), opacity .25s; opacity:0; }
+  .card.open .card-body { max-height:420px; opacity:1; border-top:1px solid var(--border); }
+  .expand-hint { font-size:9px;color:var(--muted);text-align:center;padding:3px 0 7px;opacity:.35;transition:opacity .2s; }
+  .card:hover .expand-hint { opacity:.65; }
+  .card.open .expand-hint { display:none; }
+  .anom-detail { margin-top:7px;padding:6px 9px;border-radius:4px;font-size:10px;line-height:1.5; }
+  .anom-detail.laranja { background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#f97316; }
+  .anom-detail.vermelho { background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>SqlBackup Monitor</div>
+  <div class="header-right">
+    <span class="last-update" id="lastUpdate">—</span>
+    <button class="btn-refresh" onclick="carregarTudo()">↺ Atualizar</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- FILTROS GLOBAIS -->
+  <section>
+    <div class="section-title">Filtros</div>
+    <div class="filter-bar">
+      <div class="fg">
+        <label>Cliente</label>
+        <input type="text" id="fCliente" placeholder="Nome ou documento..." oninput="aplicarFiltroCliente()"/>
+      </div>
+      <div class="fg">
+        <label>De</label>
+        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+      </div>
+      <div class="fg">
+        <label>Até</label>
+        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+      </div>
+      <div class="period-btns">
+        <button id="btnHoje"   onclick="setPeriodo('hoje')">Hoje</button>
+        <button id="btnMes"    onclick="setPeriodo('mes')">Este mês</button>
+        <button id="btnMesAnt" onclick="setPeriodo('mesant')">Mês anterior</button>
+      </div>
+      <button class="btn-clear" onclick="limparFiltros()">✕ Limpar</button>
+    </div>
+  </section>
+
+  <!-- CONFIG CICLO -->
+  <section>
+    <div class="section-title">Configurações de Monitoramento</div>
+    <div class="config-bar">
+      <strong>⚙ Alerta de ciclo</strong>
+      <div class="config-sep"></div>
+      <div class="config-field">
+        <label>Tolerância</label>
+        <input type="number" id="cfgTolerancia" value="30" min="5" max="120" onchange="aplicarFiltroCliente()"/>
+        <span>min após o ciclo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CARDS STATUS -->
+  <section>
+    <div class="section-title">Status Atual por Banco <span style="font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);margin-left:4px">— clique para expandir</span></div>
+    <div style="display:flex;gap:14px;align-items:center;font-size:10px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></span>Normal</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--laranja);display:inline-block"></span>Alerta (ciclo atrasado ou espaço em aviso)</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--erro);display:inline-block"></span>Crítico (erro ou espaço crítico)</span>
+    </div>
+    <div class="cards-grid" id="cardsContainer">
+      <div class="loader"><div class="spin"></div> Carregando...</div>
+    </div>
+  </section>
+
+  <!-- BANNER FILTRO ATIVO -->
+  <div class="filter-banner" id="filterBanner">
+    <span>🔍 Filtrando por: <span id="bannerLabel"></span></span>
+    <button class="btn-deselect" onclick="desselecionarCard()">✕ Limpar seleção</button>
+  </div>
+
+  <!-- GRÁFICO -->
+  <section>
+    <div class="section-title" id="chartTitle">Tamanho do Banco ao Longo do Tempo</div>
+    <div class="chart-container" id="chartContainer">
+      <div class="chart-toolbar">
+        <!-- Modo sem seleção: selects de banco e período -->
+        <div id="chartToolbarNormal" style="display:flex;gap:10px;align-items:center;">
+          <select id="selectBancoGrafico" onchange="carregarGrafico()">
+            <option value="">Todos os bancos</option>
+          </select>
+          <select id="selectDias" onchange="carregarGrafico()">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </div>
+        <!-- Modo com cliente selecionado -->
+        <div id="chartToolbarCliente" style="display:none;align-items:center;gap:10px;">
+          <span style="font-family:var(--ui);font-weight:800;font-size:13px;color:var(--text)" id="chartClienteLabel">—</span>
+          <span style="font-size:10px;color:var(--muted)" id="chartBancoLabel"></span>
+          <select id="selectDias2" onchange="document.getElementById('selectDias').value=this.value;carregarGrafico()">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">
+          <span><span style="color:var(--accent);">●</span> Dados (GB)</span>
+          <span><span style="color:var(--ok);">●</span> Log (GB)</span>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="chartTamanho"></canvas></div>
+    </div>
+  </section>
+
+  <!-- HISTÓRICO -->
+  <section>
+    <div class="section-title">Histórico de Eventos</div>
+    <div class="table-container" id="tableContainer">
+      <div class="table-toolbar">
+        <select id="filtroTipo" onchange="carregarHistorico()">
+          <option value="">Todos os tipos</option>
+          <option value="OK">✅ OK</option>
+          <option value="Erro">🚨 Erro</option>
+          <option value="Alerta">⚠️ Alerta</option>
+        </select>
+        <select id="filtroBanco" onchange="if(!cardSelecionado) carregarHistorico()">
+          <option value="">Todos os bancos</option>
+        </select>
+        <select id="filtroEstrategia" onchange="carregarHistorico()">
+          <option value="">Todas as estratégias</option>
+          <option value="Simple">Simple</option>
+          <option value="Full">Full</option>
+        </select>
+        <select id="filtroLimit" onchange="carregarHistorico()">
+          <option value="50">50 registros</option>
+          <option value="100" selected>100 registros</option>
+          <option value="500">500 registros</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Data/Hora</th><th>Tipo</th><th>Cliente</th>
+            <th>Banco</th><th>Estratégia</th><th>Operação</th>
+            <th>Freq.</th><th>Próx. Execução</th>
+            <th>Dados GB</th><th>Log GB</th><th>Status</th>
+          </tr></thead>
+          <tbody id="tabelaHistorico">
+            <tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- MODAL DETALHE CLIENTE -->
+<div class="overlay" id="overlay" onclick="fecharOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitulo">Detalhe do Cliente</h2>
+      <button class="modal-close" onclick="fecharModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-chips" id="modalChips"></div>
+      <div class="modal-stats" id="modalStats"></div>
+      <div class="modal-period">
+        <label>Período:</label>
+        <input type="date" id="mDe"  onchange="limparModalBtns();renderModalTabela()"/>
+        <input type="date" id="mAte" onchange="limparModalBtns();renderModalTabela()"/>
+        <button id="mBtnHoje"   onclick="setModalPeriodo('hoje')">Hoje</button>
+        <button id="mBtnSemana" onclick="setModalPeriodo('semana')" class="active">Esta semana</button>
+        <button id="mBtnMes"    onclick="setModalPeriodo('mes')">Este mês</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Data/Hora</th><th>Tipo</th><th>Banco</th>
+            <th>Estratégia</th><th>Operação</th><th>Ciclo</th>
+            <th>Arquivo</th><th>Dados GB</th><th>Log GB</th><th>Status</th>
+          </tr></thead>
+          <tbody id="modalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = {
+  ts: v => {
+    if (!v) return '—';
+    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  },
+  tsm: v => {
+    if (!v) return '—';
+    return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  },
+  n: (v, d=3) => v != null ? Number(v).toFixed(d) : '—',
+  badge: t => {
+    const k = (t||'').toLowerCase();
+    const c = k==='ok'?'ok':(k==='erro'||k==='error')?'erro':'alerta';
+    const l = {ok:'✅ OK',erro:'🚨 Erro',alerta:'⚠️ Alerta'};
+    return `<span class="badge ${c}">${l[c]??t}</span>`;
+  },
+  badgeEst: e => {
+    if (!e) return '—';
+    const cls = e.toLowerCase() === 'full' ? 'full' : 'simple';
+    return `<span class="badge-est ${cls}">${e}</span>`;
+  },
+  tipoOpIcon: t => {
+    const m = {
+      'Full'               : '🔵 Full',
+      'Diferencial'        : '🟡 Diferencial',
+      'Diferencial (âncora)':'🟠 Âncora',
+      'Log'                : '📋 Log',
+      'ShrinkLog'          : '🗜 Shrink',
+      'ShrinkLogFalhou'    : '🗜❌ Shrink Falhou',
+      'AjusteMemoria'      : '🧠 Memória',
+      'PressaoMemoria'     : '🧠⚠ Pressão Mem',
+      'MudancaParaSimple'  : '⚙ →Simple',
+      'MudancaParaFull'    : '⚙ →Full',
+      'FalhaFullPreSimple' : '❌ Falha PreSimple',
+      'RebuildAdiado'      : '🔧⏳ Rebuild Adiado',
     };
     return m[t] ?? (t || '—');
   },
@@ -578,15 +1478,18 @@ function renderCards(rows) {
     const fc   = fmt.exprColor(pct);
     const isSel = cardSelecionado && n._key === cardSelecionado._key;
     const isDim = cardSelecionado && !isSel;
-    return `<div class="card ${cls}${cicloAtrasado?' ciclo-atrasado':''}${isSel?' selected':''}${isDim?' dimmed':''}"
+    return `<div class="card ${cls}${anom ? (anom.nivel==='vermelho' ? ' anom-vermelho' : ' ciclo-atrasado') : ''}${isSel?' selected':''}${isDim?' dimmed':''}"
          data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
-         onclick="onCardClick(this)">
+         onclick="onCardClick(this, event)">
       <div class="card-header">
         <div class="card-cliente">${n._nome}</div>
         ${fmt.badge(n._estado)}
       </div>
       <div class="card-doc">${n._doc}</div>
-      <div class="card-banco-sub">🗄 ${n._banco}</div>
+      <div class="card-banco-sub">🗄 ${n._banco} <span style="font-size:9px;color:var(--muted);opacity:.55">${fmt.tempoRelativo(n._dt)}</span></div>
+      <div class="expand-hint">▸ clique para expandir</div>
+      <div class="card-body">
+      ${anom ? '<div class="anom-detail ' + anom.nivel + '"><b>' + (anom.nivel==='vermelho'?'🔴 Crítico':'🟠 Alerta') + ':</b> ' + anom.motivo + '</div>' : ''}
       <div style="margin-bottom:8px;">${fmt.badgeEst(n._est)}&nbsp;<span style="font-size:9px;color:var(--muted);">modelo SQL: ${r.recovery??r.Recovery??'—'}</span></div>
       <div class="card-metrics">
         <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
@@ -602,6 +1505,7 @@ function renderCards(rows) {
       <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
       ${fmt.cardCiclo(r)}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
+      </div>
     </div>`;
   }).join('');
 }
