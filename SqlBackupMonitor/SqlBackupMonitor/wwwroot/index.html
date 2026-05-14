@@ -165,74 +165,6 @@
   .modal-period button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
   @media(max-width:640px) { header{padding:0 16px} main{padding:16px} .modal-stats{grid-template-columns:repeat(2,1fr)} }
-
-  /* ── CARD COLLAPSE/EXPAND ── */
-  .card-body        { display:none; padding:10px 10px 10px; border-top:1px solid var(--border); margin-top:0; }
-  .card.open .card-body { display:block; }
-  .expand-hint { font-size:9px; color:var(--muted); text-align:center; padding:2px 0 5px; opacity:.4; letter-spacing:.4px; }
-  .card:hover .expand-hint { opacity:.7; }
-  .card.open .expand-hint  { display:none; }
-
-  /* ── ANOMALIA: pulso ── */
-  .card.ciclo-atrasado { animation: card-pulse-orange 3s ease-in-out infinite; }
-  .card.anom-vermelho  { border-color:#ef4444 !important; background:rgba(239,68,68,.07); animation: card-pulse-red 2.5s ease-in-out infinite; }
-  .card.open.ciclo-atrasado, .card.open.anom-vermelho { animation: none; }
-  @keyframes card-pulse-orange { 0%,100%{ box-shadow:0 0 0 1px rgba(249,115,22,.25); } 50%{ box-shadow:0 0 0 3px rgba(249,115,22,.55); } }
-  @keyframes card-pulse-red    { 0%,100%{ box-shadow:0 0 0 1px rgba(239,68,68,.25);  } 50%{ box-shadow:0 0 0 3px rgba(239,68,68,.55);  } }
-
-  /* ── DETALHE ANOMALIA (dentro do card expandido) ── */
-  .anom-detail { margin-bottom:8px; padding:6px 9px; border-radius:4px; font-size:10px; line-height:1.5; }
-  .anom-detail.laranja  { background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.3); color:#f97316; }
-  .anom-detail.vermelho { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#ef4444; }
-
-  /* tempo relativo no card colapsado */
-  .card-tempo { font-size:9px; color:var(--muted); opacity:.5; margin-left:3px; }
-  /* ── card colapsado: compacto, só nome+cnpj ── */
-  .card-header { display:flex; align-items:center; gap:6px; padding:8px 10px 4px; }
-  .card-dot-status { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-  .card-dot-status.ok     { background:var(--ok); }
-  .card-dot-status.erro   { background:var(--erro); box-shadow:0 0 5px var(--erro); }
-  .card-dot-status.alerta { background:var(--alerta); }
-  .card-dot-status.laranja{ background:#f97316; animation:blink 1.4s infinite; }
-  .card-cliente { font-family:var(--ui); font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; line-height:1.3; }
-  .card-doc {
-    font-size:9px; color:var(--accent); font-weight:600; letter-spacing:.3px;
-    padding:0 10px 5px; cursor:pointer; user-select:all;
-    display:flex; align-items:center; gap:5px;
-  }
-  .card-doc:hover .copy-icon { opacity:1; }
-  .copy-icon { font-size:9px; opacity:0; transition:opacity .2s; color:var(--muted); }
-  .copy-flash { color:var(--ok) !important; opacity:1 !important; }
-  .card-banco-sub { font-size:9px; color:var(--muted); padding:0 10px 6px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-  /* ── card compacto colapsado ── */
-  .card-header { display:flex; align-items:center; gap:6px; padding:8px 10px 3px; }
-  .card-dot-status { width:6px; height:6px; border-radius:50%; flex-shrink:0; transition:background .3s; }
-  .card-dot-status.ok      { background:var(--ok); }
-  .card-dot-status.erro    { background:var(--erro); box-shadow:0 0 5px var(--erro); }
-  .card-dot-status.alerta  { background:var(--alerta); }
-  .card-dot-status.laranja { background:#f97316; animation:blink 1.4s infinite; }
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-  .card-cliente { font-family:var(--ui); font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
-  .card-doc {
-    font-size:9px; color:var(--accent); font-weight:600; letter-spacing:.3px;
-    padding:1px 10px 4px; cursor:pointer; user-select:all;
-    display:flex; align-items:center; gap:4px;
-  }
-  .card-doc:hover { color:var(--ok); }
-  .copy-icon { font-size:9px; opacity:0; transition:opacity .15s; color:var(--muted); }
-  .card-doc:hover .copy-icon { opacity:.7; }
-  .copy-flash { color:var(--ok) !important; opacity:1 !important; }
-  .card-banco-sub { font-size:9px; color:var(--muted); padding:0 10px 4px; opacity:.65; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .card-body { display:none; padding:10px; border-top:1px solid var(--border); }
-  .card.open .card-body { display:block; }
-  .expand-hint { font-size:8px; color:var(--muted); text-align:center; padding:1px 0 5px; opacity:.3; letter-spacing:.3px; transition:opacity .15s; }
-  .card:hover .expand-hint { opacity:.6; }
-  .card.open .expand-hint { display:none; }
-  .anom-detail { margin-bottom:8px; padding:6px 8px; border-radius:4px; font-size:10px; line-height:1.5; }
-  .anom-detail.laranja { background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.3); color:#f97316; }
-  .anom-detail.vermelho { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#ef4444; }
-  .card-tempo { font-size:8px; color:var(--muted); opacity:.5; margin-left:2px; }
 </style>
 </head>
 <body>
@@ -288,8 +220,7 @@
 
   <!-- CARDS STATUS -->
   <section>
-    <div class="section-title">Status Atual por Banco <span style="font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)">— clique para expandir</span></div>
-    <div style="display:flex;gap:14px;align-items:center;font-size:10px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></span>Normal</span><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#f97316;display:inline-block"></span>Alerta</span><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--erro);display:inline-block"></span>Crítico</span></div>
+    <div class="section-title">Status Atual por Banco</div>
     <div class="cards-grid" id="cardsContainer">
       <div class="loader"><div class="spin"></div> Carregando...</div>
     </div>
@@ -445,7 +376,6 @@ const fmt = {
       'MudancaParaSimple'  : '⚙ →Simple',
       'MudancaParaFull'    : '⚙ →Full',
       'FalhaFullPreSimple' : '❌ Falha PreSimple',
-      'RebuildAdiado'      : '🔧⏳ Rebuild Adiado',
     };
     return m[t] ?? (t || '—');
   },
@@ -500,30 +430,11 @@ let todosHistorico = [];
 let clienteAtual   = null;
 let cardSelecionado = null;
 
-function onCardClick(el, event) {
-  if (event) event.stopPropagation();
+function onCardClick(el) {
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
   const _key        = el.dataset.key;
-  const jaAberto    = el.classList.contains('open');
-
-  // Fecha todos os outros
-  document.querySelectorAll('#cardsContainer .card.open').forEach(c => {
-    if (c !== el) c.classList.remove('open');
-  });
-
-  // Toggle: clique no aberto fecha (e desselecionase era o selecionado)
-  if (jaAberto) {
-    el.classList.remove('open');
-    if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); }
-    return;
-  }
-
-  // Abre
-  el.classList.add('open');
-
-  // Seleciona e filtra gráfico/histórico
   if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); return; }
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
@@ -536,6 +447,7 @@ function onCardClick(el, event) {
   document.getElementById('filterBanner').classList.add('visible');
   document.getElementById('chartContainer').classList.add('hl');
   document.getElementById('tableContainer').classList.add('hl');
+  // Atualiza toolbar do gráfico para modo "cliente selecionado"
   document.getElementById('chartToolbarNormal').style.display  = 'none';
   document.getElementById('chartToolbarCliente').style.display = 'flex';
   document.getElementById('chartClienteLabel').textContent = clienteNome;
@@ -666,45 +578,15 @@ function renderCards(rows) {
     const fc   = fmt.exprColor(pct);
     const isSel = cardSelecionado && n._key === cardSelecionado._key;
     const isDim = cardSelecionado && !isSel;
-    const _tol = Number(document.getElementById('cfgTolerancia')?.value || 30);
-    const _wP  = Number(document.getElementById('cfgExpressWarn')?.value || 80);
-    const _cP  = Number(document.getElementById('cfgExpressCrit')?.value || 95);
-    const _isEx = (r.edicao||'').toLowerCase().includes('express');
-    const _pct  = Number(r.percentualExpress||0);
-    const _cls  = (n._estado||'').toLowerCase();
-    const anom = (() => {
-      if (_cls === 'erro') return {nivel:'vermelho', motivo:'Erro: '+n._msg};
-      if (_isEx && _pct >= _cP) return {nivel:'vermelho', motivo:'Express crítico '+_pct.toFixed(1)+'% de 10GB'};
-      if (n._prox && new Date() > new Date(new Date(n._prox).getTime()+_tol*60000)) {
-        const min = Math.round((new Date()-new Date(n._prox))/60000);
-        return {nivel:'laranja', motivo:'Ciclo atrasado '+min+'min (tol:'+_tol+'min)'};
-      }
-      if (_isEx && _pct >= _wP) return {nivel:'laranja', motivo:'Express alerta '+_pct.toFixed(1)+'% de 10GB'};
-      return null;
-    })();
-    const tempoTag    = fmt.tempoRelativo(n._dt) ? '<span class="card-tempo">'+fmt.tempoRelativo(n._dt)+'</span>' : '';
-    const dotCls      = anom ? (anom.nivel==='vermelho' ? 'erro' : 'laranja') : fmt.cardCls(n._estado);
-    const anomBadge   = anom
-      ? '<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;flex-shrink:0;background:'+(anom.nivel==='vermelho'?'rgba(239,68,68,.2)':'rgba(249,115,22,.2)')+';color:'+(anom.nivel==='vermelho'?'var(--erro)':'#f97316')+'">'+(anom.nivel==='vermelho'?'ERR':'AVS')+'</span>'
-      : '';
-    const anomDetailHtml = anom
-      ? '<div class="anom-detail '+anom.nivel+'"><b>'+(anom.nivel==='vermelho'?'🔴 Crítico':'🟠 Alerta')+':</b> '+anom.motivo+'</div>'
-      : '';
-    return `<div class="card ${cls}${anom?(anom.nivel==='vermelho'?' anom-vermelho':' ciclo-atrasado'):''}${isSel?' selected':''}${isDim?' dimmed':''}"
+    return `<div class="card ${cls}${cicloAtrasado?' ciclo-atrasado':''}${isSel?' selected':''}${isDim?' dimmed':''}"
          data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
-         onclick="onCardClick(this, event)">
+         onclick="onCardClick(this)">
       <div class="card-header">
-        <div class="card-dot-status ${dotCls}"></div>
-        <div class="card-cliente" title="${n._nome}">${n._nome}</div>
-        ${anomBadge}
+        <div class="card-cliente">${n._nome}</div>
+        ${fmt.badge(n._estado)}
       </div>
-      <div class="card-doc" title="Clique para copiar o CNPJ" onclick="copiarCnpj(event, this, '${n._doc}')">
-        ${n._doc} <span class="copy-icon">⎘</span>
-      </div>
-      <div class="card-banco-sub">🗄 ${n._banco} ${tempoTag}</div>
-      <div class="expand-hint">▸ expandir</div>
-      <div class="card-body">
-      ${anomDetailHtml}
+      <div class="card-doc">${n._doc}</div>
+      <div class="card-banco-sub">🗄 ${n._banco}</div>
       <div style="margin-bottom:8px;">${fmt.badgeEst(n._est)}&nbsp;<span style="font-size:9px;color:var(--muted);">modelo SQL: ${r.recovery??r.Recovery??'—'}</span></div>
       <div class="card-metrics">
         <div class="metric"><label>Dados</label><value style="font-size:11px">${n._tam}</value></div>
@@ -720,7 +602,6 @@ function renderCards(rows) {
       <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
       ${fmt.cardCiclo(r)}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
-      </div><!-- /card-body -->
     </div>`;
   }).join('');
 }
@@ -924,25 +805,6 @@ function renderModalTabela() {
       <td class="muted" style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
     </tr>`;
   }).join('');
-}
-
-// ── copiar CNPJ ──
-function copiarCnpj(event, el, cnpj) {
-  event.stopPropagation();
-  if (!cnpj || cnpj === '—') return;
-  navigator.clipboard.writeText(cnpj).then(() => {
-    const icon = el.querySelector('.copy-icon');
-    if (icon) { icon.textContent = '✓'; icon.classList.add('copy-flash'); }
-    setTimeout(() => {
-      if (icon) { icon.textContent = '⎘'; icon.classList.remove('copy-flash'); }
-    }, 1500);
-  }).catch(() => {
-    // fallback para browsers sem clipboard API
-    const ta = document.createElement('textarea');
-    ta.value = cnpj; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-  });
 }
 
 async function carregarTudo() {
