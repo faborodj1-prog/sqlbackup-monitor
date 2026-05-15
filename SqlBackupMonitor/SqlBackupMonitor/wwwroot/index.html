@@ -480,23 +480,22 @@ function onCardClick(el, event) {
   const _key        = el.dataset.key;
   const jaAberto    = el.classList.contains('open');
 
-  // Fecha todos os outros
+  // Fecha todos os outros cards abertos
   document.querySelectorAll('#cardsContainer .card.open').forEach(c => {
     if (c !== el) c.classList.remove('open');
   });
 
-  // Toggle: mesmo card clicado → fecha e desselecionado
+  // Toggle: se já estava aberto → fecha e desselecionado, para aqui
   if (jaAberto) {
     el.classList.remove('open');
-    if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); }
+    desselecionarCard();
     return;
   }
 
-  // Abre
+  // Abre o card
   el.classList.add('open');
 
-  // Seleciona e filtra
-  if (cardSelecionado && cardSelecionado._key === _key) { desselecionarCard(); return; }
+  // Seleciona e filtra gráfico/histórico
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
   document.querySelectorAll('#cardsContainer .card').forEach(c => {
     const isMe = c.dataset.key === _key;
