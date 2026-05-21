@@ -243,7 +243,7 @@
   .btn-del    { height:34px; padding:0 16px; background:transparent; border:1px solid var(--erro);
     color:var(--erro); font-family:var(--mono); font-size:12px; border-radius:4px; cursor:pointer; transition:all .15s; }
   .btn-del:hover { background:rgba(239,68,68,.1); }
-  .admin-status { font-size:10px; padding:3px 10px; border-radius:20px; font-weight:600; }
+  .admin-status { font-size:10px; padding:3px 10px; border-radius:20px; font-weight:600; white-space:nowrap; }
   .admin-status.ativa  { background:rgba(34,197,94,.15); color:var(--ok); }
   .admin-status.local  { background:rgba(107,114,128,.15); color:var(--muted); }
   .admin-msg { font-size:11px; padding:8px 12px; border-radius:4px; margin-top:8px; display:none; }
@@ -435,24 +435,6 @@
           <tbody id="modalTbody"></tbody>
         </table>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL LOGIN ADMIN ───────────────────────────────────────── -->
-<div class="overlay" id="adminLoginOverlay" onclick="fecharLoginAdmin(event)">
-  <div class="modal" style="max-width:360px">
-    <div class="modal-header">
-      <h2>🔒 Acesso Admin</h2>
-      <button class="modal-close" onclick="document.getElementById('adminLoginOverlay').classList.remove('open')">×</button>
-    </div>
-    <div class="modal-body" style="gap:12px">
-      <p style="font-size:12px;color:var(--muted)">Acesso à configuração remota por banco. Insira a senha de administrador do monitor.</p>
-      <input type="password" id="adminPwdInput" placeholder="Senha de administrador"
-        style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;border-radius:4px;outline:none;"
-        onkeydown="if(event.key==='Enter') loginAdmin()"/>
-      <button class="btn-save" onclick="loginAdmin()">Entrar</button>
-      <div id="adminLoginErro" class="admin-msg err" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -1224,48 +1206,14 @@ setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
 // ════════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════════
-let _adminPwd = '';
 let _adminBanco = '';
-const DIAS_SEMANA = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-
-function abrirLoginAdmin() {
-  document.getElementById('adminPwdInput').value = '';
-  document.getElementById('adminLoginErro').style.display = 'none';
-  document.getElementById('adminLoginOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('adminPwdInput').focus(), 100);
-}
-
-function fecharLoginAdmin(e) {
-  if (e.target === document.getElementById('adminLoginOverlay'))
-    document.getElementById('adminLoginOverlay').classList.remove('open');
-}
 
 function fecharPainelAdmin(e) {
   if (e.target === document.getElementById('adminPanelOverlay'))
     document.getElementById('adminPanelOverlay').classList.remove('open');
 }
 
-async function loginAdmin() {
-  const pwd = document.getElementById('adminPwdInput').value;
-  if (!pwd) return;
-  try {
-    const resp = await fetch('/api/config', { headers: { 'X-Admin-Password': pwd } });
-    if (resp.status === 401) {
-      document.getElementById('adminLoginErro').textContent = 'Senha incorreta.';
-      document.getElementById('adminLoginErro').style.display = 'block';
-      return;
-    }
-    _adminPwd = pwd;
-    document.getElementById('adminLoginOverlay').classList.remove('open');
-    await abrirPainelAdmin();
-  } catch(e) {
-    document.getElementById('adminLoginErro').textContent = 'Erro de conexão: ' + e.message;
-    document.getElementById('adminLoginErro').style.display = 'block';
-  }
-}
-
-async function abrirPainelAdmin() {
-  // Popula seletor com todos os bancos conhecidos
+async function abrirLoginAdmin() {
   const bancos = await (await fetch('/api/bancos')).json();
   const sel = document.getElementById('adminBancoSelect');
   sel.innerHTML = '<option value="">Selecione o banco...</option>';
@@ -1310,15 +1258,7 @@ async function carregarConfigAdmin(banco) {
   if (!banco) { badge.textContent = 'Sem config remota'; badge.className = 'admin-status local'; return; }
 
   try {
-    const resp = await fetch(`/api/config/${encodeURIComponent(banco)}`,
-      { headers: { 'X-Api-Key': _adminPwd } }); // usa pwd como api-key fallback para leitura
-    // Tenta também com X-Admin-Password por compatibilidade
-    if (resp.status === 401) {
-      // leitura com chave errada — mostra form em branco
-      badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
-      preencherFormAdmin(null);
-      return;
-    }
+    const resp = await fetch(`/api/config/${encodeURIComponent(banco)}`);
     if (resp.status === 404) {
       badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
       preencherFormAdmin(null);
@@ -1388,18 +1328,16 @@ function mostrarAdminMsg(txt, tipo) {
 
 async function salvarConfigAdmin() {
   if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
-  const payload = JSON.stringify(coletarFormAdmin());
   try {
     const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': _adminPwd },
-      body: payload
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(coletarFormAdmin())
     });
-    if (resp.status === 401) { mostrarAdminMsg('Senha inválida.', 'err'); return; }
     if (!resp.ok) { mostrarAdminMsg('Erro ao salvar: HTTP ' + resp.status, 'err'); return; }
     document.getElementById('adminStatusBadge').textContent = '✓ Config remota ativa';
     document.getElementById('adminStatusBadge').className   = 'admin-status ativa';
-    mostrarAdminMsg('✅ Config salva! Na próxima execução do motor, será aplicada automaticamente.', 'ok');
+    mostrarAdminMsg('✅ Config salva! Na próxima execução do motor será aplicada automaticamente.', 'ok');
   } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
 }
 
@@ -1407,11 +1345,8 @@ async function limparConfigAdmin() {
   if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
   if (!confirm(`Remover config remota do banco "${_adminBanco}"? O motor voltará a usar appsettings.json local.`)) return;
   try {
-    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, {
-      method: 'DELETE',
-      headers: { 'X-Admin-Password': _adminPwd }
-    });
-    if (resp.status === 401) { mostrarAdminMsg('Senha inválida.', 'err'); return; }
+    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, { method: 'DELETE' });
+    if (!resp.ok && resp.status !== 404) { mostrarAdminMsg('Erro: HTTP ' + resp.status, 'err'); return; }
     document.getElementById('adminStatusBadge').textContent = 'Sem config remota';
     document.getElementById('adminStatusBadge').className   = 'admin-status local';
     preencherFormAdmin(null);

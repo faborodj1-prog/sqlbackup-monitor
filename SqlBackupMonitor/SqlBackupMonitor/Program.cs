@@ -35,8 +35,7 @@ static string ConvertUrl(string url)
     return $"Host={host};Port={dbPort};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
 }
 
-var apiKey     = Environment.GetEnvironmentVariable("API_KEY")      ?? "dev-key-local";
-var adminPass  = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "admin-local";
+var apiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "dev-key-local";
 
 // ── Migração automática ───────────────────────────────────────────────────────
 await using (var conn = new NpgsqlConnection(connStr))
@@ -392,13 +391,10 @@ app.MapGet("/api/memoria", async (string? banco = null, int dias = 30) =>
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// GET /api/config — lista bancos com config remota (requer X-Admin-Password)
+// GET /api/config — lista bancos com config remota (público)
 // ════════════════════════════════════════════════════════════════════════════
-app.MapGet("/api/config", async (HttpContext ctx) =>
+app.MapGet("/api/config", async () =>
 {
-    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
-        return Results.Unauthorized();
-
     await using var conn = new NpgsqlConnection(connStr);
     var bancos = await conn.QueryAsync<string>(@"
         SELECT ""BancoNome"" FROM ""BackupConfigs"" ORDER BY ""BancoNome""");
@@ -406,13 +402,11 @@ app.MapGet("/api/config", async (HttpContext ctx) =>
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// GET /api/config/{banco} — retorna config de um banco (requer X-Api-Key)
-// Usado pelo SqlBackup.exe (ConfigSync) para buscar overrides remotos
+// GET /api/config/{banco} — retorna config de um banco (público)
+// Usado pelo SqlBackup.exe (ConfigSync) e pelo painel admin
 // ════════════════════════════════════════════════════════════════════════════
-app.MapGet("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+app.MapGet("/api/config/{banco}", async (string banco) =>
 {
-    if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var key) || key != apiKey)
-        return Results.Unauthorized();
 
     await using var conn = new NpgsqlConnection(connStr);
     var row = await conn.QueryFirstOrDefaultAsync<(string ConfigJson, DateTime UpdatedAt)>(
@@ -443,13 +437,11 @@ app.MapGet("/api/config/{banco}", async (string banco, HttpContext ctx) =>
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// PUT /api/config/{banco} — salva ou atualiza config remota (requer X-Admin-Password)
+// PUT /api/config/{banco} — salva ou atualiza config remota (público)
 // Payload: JSON com os campos não-sensíveis (agendamento + thresholds)
 // ════════════════════════════════════════════════════════════════════════════
 app.MapPut("/api/config/{banco}", async (string banco, HttpContext ctx) =>
 {
-    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
-        return Results.Unauthorized();
 
     using var sr   = new System.IO.StreamReader(ctx.Request.Body);
     var body       = await sr.ReadToEndAsync();
@@ -472,13 +464,11 @@ app.MapPut("/api/config/{banco}", async (string banco, HttpContext ctx) =>
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// DELETE /api/config/{banco} — remove config remota (requer X-Admin-Password)
+// DELETE /api/config/{banco} — remove config remota (público)
 // Após remoção, o SqlBackup.exe voltará a usar appsettings.json local
 // ════════════════════════════════════════════════════════════════════════════
-app.MapDelete("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+app.MapDelete("/api/config/{banco}", async (string banco) =>
 {
-    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
-        return Results.Unauthorized();
 
     await using var conn = new NpgsqlConnection(connStr);
     var rows = await conn.ExecuteAsync(
