@@ -35,7 +35,8 @@ static string ConvertUrl(string url)
     return $"Host={host};Port={dbPort};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
 }
 
-var apiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "dev-key-local";
+var apiKey     = Environment.GetEnvironmentVariable("API_KEY")      ?? "dev-key-local";
+var adminPass  = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "admin-local";
 
 // ── Migração automática ───────────────────────────────────────────────────────
 await using (var conn = new NpgsqlConnection(connStr))
@@ -91,6 +92,15 @@ await using (var conn = new NpgsqlConnection(connStr))
             ADD COLUMN IF NOT EXISTS ""HoraIndices""      TEXT          DEFAULT '',
             ADD COLUMN IF NOT EXISTS ""EspacoLivreGB""    NUMERIC(10,3) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0;
+    ");
+
+    // ── Tabela de configuração remota por banco ───────────────────────────────
+    await conn.ExecuteAsync(@"
+        CREATE TABLE IF NOT EXISTS ""BackupConfigs"" (
+            ""BancoNome""   TEXT PRIMARY KEY,
+            ""ConfigJson""  TEXT NOT NULL,
+            ""UpdatedAt""   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
     ");
 }
 
@@ -379,6 +389,104 @@ app.MapGet("/api/memoria", async (string? banco = null, int dias = 30) =>
         ORDER BY ""DataExecucao"" DESC",
         new { banco, dias });
     return Results.Ok(rows);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/config — lista bancos com config remota (requer X-Admin-Password)
+// ════════════════════════════════════════════════════════════════════════════
+app.MapGet("/api/config", async (HttpContext ctx) =>
+{
+    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
+        return Results.Unauthorized();
+
+    await using var conn = new NpgsqlConnection(connStr);
+    var bancos = await conn.QueryAsync<string>(@"
+        SELECT ""BancoNome"" FROM ""BackupConfigs"" ORDER BY ""BancoNome""");
+    return Results.Ok(bancos);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/config/{banco} — retorna config de um banco (requer X-Api-Key)
+// Usado pelo SqlBackup.exe (ConfigSync) para buscar overrides remotos
+// ════════════════════════════════════════════════════════════════════════════
+app.MapGet("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+{
+    if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var key) || key != apiKey)
+        return Results.Unauthorized();
+
+    await using var conn = new NpgsqlConnection(connStr);
+    var row = await conn.QueryFirstOrDefaultAsync<(string ConfigJson, DateTime UpdatedAt)>(
+        @"SELECT ""ConfigJson"", ""UpdatedAt"" FROM ""BackupConfigs"" WHERE ""BancoNome"" = @banco",
+        new { banco });
+
+    if (row.ConfigJson == null) return Results.NotFound();
+
+    // Retorna o JSON armazenado + UpdatedAt como envelope
+    var cfg  = System.Text.Json.JsonDocument.Parse(row.ConfigJson).RootElement;
+    var resp = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        updatedAt = row.UpdatedAt,
+        config    = cfg
+    });
+    // Achata: mescla updatedAt dentro do objeto de config
+    var doc  = System.Text.Json.JsonDocument.Parse(row.ConfigJson);
+    using var ms  = new System.IO.MemoryStream();
+    using var wrt = new System.Text.Json.Utf8JsonWriter(ms);
+    wrt.WriteStartObject();
+    foreach (var prop in doc.RootElement.EnumerateObject()) prop.WriteTo(wrt);
+    wrt.WriteString("updatedAt", row.UpdatedAt);
+    wrt.WriteEndObject();
+    wrt.Flush();
+    var merged = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+
+    return Results.Content(merged, "application/json");
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// PUT /api/config/{banco} — salva ou atualiza config remota (requer X-Admin-Password)
+// Payload: JSON com os campos não-sensíveis (agendamento + thresholds)
+// ════════════════════════════════════════════════════════════════════════════
+app.MapPut("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+{
+    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
+        return Results.Unauthorized();
+
+    using var sr   = new System.IO.StreamReader(ctx.Request.Body);
+    var body       = await sr.ReadToEndAsync();
+    if (string.IsNullOrWhiteSpace(body)) return Results.BadRequest("Payload vazio.");
+
+    // Valida que é JSON válido
+    try { System.Text.Json.JsonDocument.Parse(body); }
+    catch { return Results.BadRequest("JSON inválido."); }
+
+    await using var conn = new NpgsqlConnection(connStr);
+    await conn.ExecuteAsync(@"
+        INSERT INTO ""BackupConfigs"" (""BancoNome"", ""ConfigJson"", ""UpdatedAt"")
+        VALUES (@banco, @body, NOW())
+        ON CONFLICT (""BancoNome"") DO UPDATE
+            SET ""ConfigJson"" = EXCLUDED.""ConfigJson"",
+                ""UpdatedAt""  = NOW()",
+        new { banco, body });
+
+    return Results.Ok(new { message = $"Config do banco '{banco}' atualizada." });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DELETE /api/config/{banco} — remove config remota (requer X-Admin-Password)
+// Após remoção, o SqlBackup.exe voltará a usar appsettings.json local
+// ════════════════════════════════════════════════════════════════════════════
+app.MapDelete("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+{
+    if (!ctx.Request.Headers.TryGetValue("X-Admin-Password", out var pwd) || pwd != adminPass)
+        return Results.Unauthorized();
+
+    await using var conn = new NpgsqlConnection(connStr);
+    var rows = await conn.ExecuteAsync(
+        @"DELETE FROM ""BackupConfigs"" WHERE ""BancoNome"" = @banco", new { banco });
+
+    return rows > 0
+        ? Results.Ok(new { message = $"Config do banco '{banco}' removida." })
+        : Results.NotFound(new { message = "Banco não encontrado." });
 });
 
 // Fallback → index.html (SPA)

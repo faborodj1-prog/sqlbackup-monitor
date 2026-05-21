@@ -207,6 +207,49 @@
   .anom-detail.vermelho { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#ef4444; }
   .card-tempo { font-size:8px; color:var(--muted); opacity:.5; margin-left:3px; }
 
+  /* ── ADMIN PANEL ── */
+  .btn-admin { background:var(--surface); border:1px solid var(--border2); color:var(--muted);
+    font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer;
+    border-radius:4px; transition:border-color .2s; }
+  .btn-admin:hover { border-color:#f59e0b; color:#f59e0b; }
+  .admin-modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px;
+    width:min(720px,96vw); max-height:92vh; display:flex; flex-direction:column;
+    box-shadow:0 24px 80px rgba(0,0,0,.7); }
+  .admin-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
+  .admin-tab-btn { height:28px; padding:0 12px; background:var(--bg); border:1px solid var(--border2);
+    color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .admin-tab-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .admin-tab-content { display:none; }
+  .admin-tab-content.active { display:block; }
+  .admin-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .admin-field { display:flex; flex-direction:column; gap:4px; }
+  .admin-field label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:.8px; text-transform:uppercase; }
+  .admin-field input[type=text],
+  .admin-field input[type=number],
+  .admin-field input[type=time],
+  .admin-field select { background:var(--bg); border:1px solid var(--border2); color:var(--text);
+    font-family:var(--mono); font-size:12px; padding:5px 10px; border-radius:4px; outline:none; height:30px; }
+  .admin-field input:focus, .admin-field select:focus { border-color:var(--accent); }
+  .admin-field .hint { font-size:9px; color:var(--muted); opacity:.6; margin-top:1px; }
+  .admin-dias { display:flex; gap:6px; flex-wrap:wrap; }
+  .admin-dia-btn { height:26px; padding:0 10px; background:var(--bg); border:1px solid var(--border2);
+    color:var(--muted); font-family:var(--mono); font-size:10px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .admin-dia-btn.sel { background:rgba(59,130,246,.2); border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .admin-sep { height:1px; background:var(--border); margin:14px 0; }
+  .admin-actions { display:flex; gap:10px; flex-wrap:wrap; padding-top:14px; border-top:1px solid var(--border); }
+  .btn-save   { flex:1; height:34px; background:var(--accent); border:none; color:#fff;
+    font-family:var(--mono); font-size:12px; border-radius:4px; cursor:pointer; font-weight:600; transition:opacity .15s; }
+  .btn-save:hover { opacity:.85; }
+  .btn-del    { height:34px; padding:0 16px; background:transparent; border:1px solid var(--erro);
+    color:var(--erro); font-family:var(--mono); font-size:12px; border-radius:4px; cursor:pointer; transition:all .15s; }
+  .btn-del:hover { background:rgba(239,68,68,.1); }
+  .admin-status { font-size:10px; padding:3px 10px; border-radius:20px; font-weight:600; }
+  .admin-status.ativa  { background:rgba(34,197,94,.15); color:var(--ok); }
+  .admin-status.local  { background:rgba(107,114,128,.15); color:var(--muted); }
+  .admin-msg { font-size:11px; padding:8px 12px; border-radius:4px; margin-top:8px; display:none; }
+  .admin-msg.ok  { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:var(--ok); display:block; }
+  .admin-msg.err { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:var(--erro); display:block; }
+
   /* ── CARD BODY — seções adicionais ── */
   .card-section-title { font-size:8px; color:var(--muted); font-weight:700; letter-spacing:1px;
     text-transform:uppercase; margin:10px 0 4px; opacity:.6; }
@@ -226,6 +269,7 @@
   <div class="logo"><div class="logo-dot"></div>SqlBackup Monitor</div>
   <div class="header-right">
     <span class="last-update" id="lastUpdate">—</span>
+    <button class="btn-admin"   onclick="abrirLoginAdmin()" title="Configuração remota por banco">⚙ Config</button>
     <button class="btn-refresh" onclick="carregarTudo()">↺ Atualizar</button>
   </div>
 </header>
@@ -394,6 +438,199 @@
     </div>
   </div>
 </div>
+
+<!-- ── MODAL LOGIN ADMIN ───────────────────────────────────────── -->
+<div class="overlay" id="adminLoginOverlay" onclick="fecharLoginAdmin(event)">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h2>🔒 Acesso Admin</h2>
+      <button class="modal-close" onclick="document.getElementById('adminLoginOverlay').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body" style="gap:12px">
+      <p style="font-size:12px;color:var(--muted)">Acesso à configuração remota por banco. Insira a senha de administrador do monitor.</p>
+      <input type="password" id="adminPwdInput" placeholder="Senha de administrador"
+        style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;border-radius:4px;outline:none;"
+        onkeydown="if(event.key==='Enter') loginAdmin()"/>
+      <button class="btn-save" onclick="loginAdmin()">Entrar</button>
+      <div id="adminLoginErro" class="admin-msg err" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL PAINEL ADMIN ───────────────────────────────────────── -->
+<div class="overlay" id="adminPanelOverlay" onclick="fecharPainelAdmin(event)">
+  <div class="admin-modal">
+    <div class="modal-header">
+      <h2>⚙ Configuração Remota</h2>
+      <button class="modal-close" onclick="document.getElementById('adminPanelOverlay').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Seletor de banco -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="admin-field" style="flex:1;min-width:180px">
+          <label>Banco</label>
+          <select id="adminBancoSelect" onchange="carregarConfigAdmin(this.value)">
+            <option value="">Selecione o banco...</option>
+          </select>
+        </div>
+        <div style="padding-top:16px">
+          <span id="adminStatusBadge" class="admin-status local">Sem config remota</span>
+        </div>
+      </div>
+
+      <!-- Mensagem de feedback -->
+      <div id="adminMsg" class="admin-msg"></div>
+
+      <!-- Abas -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" onclick="showAdminTab('agendamento',this)">📅 Agendamento</button>
+        <button class="admin-tab-btn"        onclick="showAdminTab('manutencao',this)">🔧 Manutenção</button>
+        <button class="admin-tab-btn"        onclick="showAdminTab('thresholds',this)">📊 Thresholds</button>
+        <button class="admin-tab-btn"        onclick="showAdminTab('retencao',this)">🗄 Retenção</button>
+      </div>
+
+      <!-- ABA: Agendamento -->
+      <div id="adminTab-agendamento" class="admin-tab-content active">
+        <div class="admin-grid">
+          <div class="admin-field" style="grid-column:1/-1">
+            <label>Dias do FULL</label>
+            <div class="admin-dias" id="adminDiasFull">
+              <button class="admin-dia-btn" data-dia="Segunda"  onclick="toggleDia(this,'full')">Seg</button>
+              <button class="admin-dia-btn" data-dia="Terça"    onclick="toggleDia(this,'full')">Ter</button>
+              <button class="admin-dia-btn" data-dia="Quarta"   onclick="toggleDia(this,'full')">Qua</button>
+              <button class="admin-dia-btn" data-dia="Quinta"   onclick="toggleDia(this,'full')">Qui</button>
+              <button class="admin-dia-btn" data-dia="Sexta"    onclick="toggleDia(this,'full')">Sex</button>
+              <button class="admin-dia-btn" data-dia="Sábado"   onclick="toggleDia(this,'full')">Sáb</button>
+              <button class="admin-dia-btn" data-dia="Domingo"  onclick="toggleDia(this,'full')">Dom</button>
+            </div>
+            <span class="hint">Dias da semana em que o FULL será executado</span>
+          </div>
+          <div class="admin-field">
+            <label>Hora do FULL</label>
+            <input type="time" id="adminHoraFull" value="01:00"/>
+            <span class="hint">Horário de início do FULL (HH:mm)</span>
+          </div>
+          <div class="admin-field">
+            <label>Intervalo Incremental (horas)</label>
+            <input type="number" id="adminIntervalHoras" min="1" max="24" value="2"/>
+            <span class="hint">Frequência de backups entre FULLs</span>
+          </div>
+          <div class="admin-field">
+            <label>Janela FULL — Início</label>
+            <input type="time" id="adminJanelaInicio" value="00:30"/>
+            <span class="hint">Início da janela segura para FULL emergencial</span>
+          </div>
+          <div class="admin-field">
+            <label>Janela FULL — Fim</label>
+            <input type="time" id="adminJanelaFim" value="03:00"/>
+            <span class="hint">Fim da janela segura para FULL emergencial</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: Manutenção -->
+      <div id="adminTab-manutencao" class="admin-tab-content">
+        <div class="admin-grid">
+          <div class="admin-field">
+            <label>Dia do DBCC CHECKDB</label>
+            <select id="adminDiaSemanaDbcc">
+              <option>Segunda</option><option>Terça</option><option>Quarta</option>
+              <option>Quinta</option><option>Sexta</option><option>Sábado</option><option>Domingo</option>
+            </select>
+            <span class="hint">Verificação de integridade do banco</span>
+          </div>
+          <div class="admin-field">
+            <label>Hora do DBCC</label>
+            <input type="time" id="adminHoraDbcc" value="23:00"/>
+          </div>
+          <div class="admin-field">
+            <label>Dia da Reorganização de Índices</label>
+            <select id="adminDiaSemanaIndices">
+              <option>Segunda</option><option>Terça</option><option>Quarta</option>
+              <option>Quinta</option><option>Sexta</option><option selected>Sábado</option><option>Domingo</option>
+            </select>
+            <span class="hint">Reorganize/Rebuild de índices fragmentados</span>
+          </div>
+          <div class="admin-field">
+            <label>Hora dos Índices</label>
+            <input type="time" id="adminHoraIndices" value="02:00"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: Thresholds -->
+      <div id="adminTab-thresholds" class="admin-tab-content">
+        <div class="admin-grid">
+          <div class="admin-field">
+            <label>Alerta FULL+LOG — Tamanho (GB)</label>
+            <input type="number" id="adminThresholdSimpleGB" min="0" value="30"/>
+            <span class="hint">Banco acima disto recebe alerta para mudar para FULL+LOG. 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Alerta FULL+LOG — Escrita (%)</label>
+            <input type="number" id="adminThresholdModificadoPercent" min="0" max="100" value="60"/>
+            <span class="hint">% de páginas modificadas que dispara alerta. 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Shrink do Log — Limite (% dos dados)</label>
+            <input type="number" id="adminThresholdLogPercent" min="0" value="150"/>
+            <span class="hint">Shrink se Log > dados × (este %). 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Reserva de Memória SQL Server (%)</label>
+            <input type="number" id="adminReservaMemoriaPercent" min="0" max="95" value="50"/>
+            <span class="hint">max server memory = RAM × (este %). 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Alerta Espaço Livre (GB)</label>
+            <input type="number" id="adminAlertaEspacoLivreGB" min="0" value="20"/>
+            <span class="hint">Alerta quando disco da PastaBase cair abaixo disto. 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Alerta LOGs do Ciclo (GB)</label>
+            <input type="number" id="adminAlertaLogsCicloGB" min="0" value="10"/>
+            <span class="hint">Alerta quando LOGs acumulados no ciclo ultrapassarem isto. 0 = desativado</span>
+          </div>
+          <div class="admin-field">
+            <label>Espaço Mínimo para Backup (GB)</label>
+            <input type="number" id="adminEspacoMinimoGB" min="0" value="5"/>
+            <span class="hint">Aborta backup se disco livre for menor que isto</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: Retenção -->
+      <div id="adminTab-retencao" class="admin-tab-content">
+        <div class="admin-grid">
+          <div class="admin-field">
+            <label>Retenção de ZIPs (dias)</label>
+            <input type="number" id="adminMaxDiasZip" min="1" value="5"/>
+            <span class="hint">ZIPs de ciclos mais antigos que isto são apagados</span>
+          </div>
+          <div class="admin-field">
+            <label>Busca de Ciclo Anterior (máx. dias)</label>
+            <input type="number" id="adminMaxDiasAnteriores" min="1" value="10"/>
+            <span class="hint">Janela para localizar o ciclo anterior e compactá-lo</span>
+          </div>
+        </div>
+        <div class="admin-sep"></div>
+        <p style="font-size:11px;color:var(--muted);line-height:1.6">
+          ℹ️ Os campos acima controlam apenas <b>agendamento e thresholds</b>.<br>
+          Dados de conexão (senha do banco, token Telegram, API key) permanecem
+          <b>apenas no appsettings.json local</b> do servidor — nunca são enviados ao monitor.
+        </p>
+      </div>
+
+      <!-- Ações -->
+      <div class="admin-actions">
+        <button class="btn-save" onclick="salvarConfigAdmin()">💾 Salvar config remota</button>
+        <button class="btn-del"  onclick="limparConfigAdmin()">🗑 Remover</button>
+      </div>
+
+    </div><!-- /modal-body -->
+  </div><!-- /admin-modal -->
+</div><!-- /adminPanelOverlay -->
 
 <script>
 const fmt = {
@@ -983,6 +1220,204 @@ async function carregarTudo() {
 carregarTudo();
 setInterval(carregarTudo, 120_000);
 setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
+
+// ════════════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ════════════════════════════════════════════════════════════════
+let _adminPwd = '';
+let _adminBanco = '';
+const DIAS_SEMANA = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+
+function abrirLoginAdmin() {
+  document.getElementById('adminPwdInput').value = '';
+  document.getElementById('adminLoginErro').style.display = 'none';
+  document.getElementById('adminLoginOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('adminPwdInput').focus(), 100);
+}
+
+function fecharLoginAdmin(e) {
+  if (e.target === document.getElementById('adminLoginOverlay'))
+    document.getElementById('adminLoginOverlay').classList.remove('open');
+}
+
+function fecharPainelAdmin(e) {
+  if (e.target === document.getElementById('adminPanelOverlay'))
+    document.getElementById('adminPanelOverlay').classList.remove('open');
+}
+
+async function loginAdmin() {
+  const pwd = document.getElementById('adminPwdInput').value;
+  if (!pwd) return;
+  try {
+    const resp = await fetch('/api/config', { headers: { 'X-Admin-Password': pwd } });
+    if (resp.status === 401) {
+      document.getElementById('adminLoginErro').textContent = 'Senha incorreta.';
+      document.getElementById('adminLoginErro').style.display = 'block';
+      return;
+    }
+    _adminPwd = pwd;
+    document.getElementById('adminLoginOverlay').classList.remove('open');
+    await abrirPainelAdmin();
+  } catch(e) {
+    document.getElementById('adminLoginErro').textContent = 'Erro de conexão: ' + e.message;
+    document.getElementById('adminLoginErro').style.display = 'block';
+  }
+}
+
+async function abrirPainelAdmin() {
+  // Popula seletor com todos os bancos conhecidos
+  const bancos = await (await fetch('/api/bancos')).json();
+  const sel = document.getElementById('adminBancoSelect');
+  sel.innerHTML = '<option value="">Selecione o banco...</option>';
+  bancos.forEach(b => { const o = document.createElement('option'); o.value = o.textContent = b; sel.appendChild(o); });
+  document.getElementById('adminMsg').className = 'admin-msg';
+  document.getElementById('adminMsg').textContent = '';
+  document.getElementById('adminPanelOverlay').classList.add('open');
+}
+
+function showAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('adminTab-' + tab).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function toggleDia(btn, group) {
+  btn.classList.toggle('sel');
+}
+
+function setDiasSelecionados(dias, group) {
+  document.querySelectorAll('#adminDiasFull .admin-dia-btn').forEach(btn => {
+    btn.classList.toggle('sel', (dias||[]).some(d => d.toLowerCase() === btn.dataset.dia.toLowerCase()));
+  });
+}
+
+function getDiasSelecionados() {
+  return [...document.querySelectorAll('#adminDiasFull .admin-dia-btn.sel')].map(b => b.dataset.dia);
+}
+
+function setSelectValue(id, val) {
+  const sel = document.getElementById(id);
+  if (!val) return;
+  for (const o of sel.options) { if (o.value === val) { sel.value = val; return; } }
+}
+
+async function carregarConfigAdmin(banco) {
+  _adminBanco = banco;
+  const badge = document.getElementById('adminStatusBadge');
+  const msg   = document.getElementById('adminMsg');
+  msg.className = 'admin-msg'; msg.textContent = '';
+  if (!banco) { badge.textContent = 'Sem config remota'; badge.className = 'admin-status local'; return; }
+
+  try {
+    const resp = await fetch(`/api/config/${encodeURIComponent(banco)}`,
+      { headers: { 'X-Api-Key': _adminPwd } }); // usa pwd como api-key fallback para leitura
+    // Tenta também com X-Admin-Password por compatibilidade
+    if (resp.status === 401) {
+      // leitura com chave errada — mostra form em branco
+      badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
+      preencherFormAdmin(null);
+      return;
+    }
+    if (resp.status === 404) {
+      badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
+      preencherFormAdmin(null);
+      return;
+    }
+    const cfg = await resp.json();
+    badge.textContent = '✓ Config remota ativa'; badge.className = 'admin-status ativa';
+    preencherFormAdmin(cfg);
+  } catch(e) {
+    badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
+    preencherFormAdmin(null);
+  }
+}
+
+function preencherFormAdmin(cfg) {
+  const v = cfg ?? {};
+  setDiasSelecionados(v.diasFull ?? [], 'full');
+  document.getElementById('adminHoraFull').value                  = v.horaFull              ?? '01:00';
+  document.getElementById('adminIntervalHoras').value             = v.intervalHoras          ?? 2;
+  document.getElementById('adminJanelaInicio').value              = v.janelaFullInicio       ?? '00:30';
+  document.getElementById('adminJanelaFim').value                 = v.janelaFullFim          ?? '03:00';
+  setSelectValue('adminDiaSemanaDbcc',    v.diaSemanaDbcc    ?? 'Sábado');
+  document.getElementById('adminHoraDbcc').value                  = v.horaDbcc               ?? '23:00';
+  setSelectValue('adminDiaSemanaIndices', v.diaSemanaIndices ?? 'Domingo');
+  document.getElementById('adminHoraIndices').value               = v.horaIndices            ?? '02:00';
+  document.getElementById('adminThresholdSimpleGB').value         = v.thresholdSimpleGB       ?? 30;
+  document.getElementById('adminThresholdModificadoPercent').value= v.thresholdModificadoPercent ?? 60;
+  document.getElementById('adminThresholdLogPercent').value       = v.thresholdLogPercent    ?? 150;
+  document.getElementById('adminReservaMemoriaPercent').value     = v.reservaMemoriaPercent  ?? 50;
+  document.getElementById('adminAlertaEspacoLivreGB').value       = v.alertaEspacoLivreGB   ?? 20;
+  document.getElementById('adminAlertaLogsCicloGB').value         = v.alertaLogsCicloGB     ?? 10;
+  document.getElementById('adminEspacoMinimoGB').value            = v.espacoMinimoGB         ?? 5;
+  document.getElementById('adminMaxDiasZip').value                = v.maxDiasZip             ?? 5;
+  document.getElementById('adminMaxDiasAnteriores').value         = v.maxDiasAnteriores      ?? 10;
+}
+
+function coletarFormAdmin() {
+  return {
+    diasFull:                 getDiasSelecionados(),
+    horaFull:                 document.getElementById('adminHoraFull').value,
+    diasIncremental:          [],
+    intervalHoras:            parseInt(document.getElementById('adminIntervalHoras').value) || 2,
+    janelaFullInicio:         document.getElementById('adminJanelaInicio').value,
+    janelaFullFim:            document.getElementById('adminJanelaFim').value,
+    diaSemanaDbcc:            document.getElementById('adminDiaSemanaDbcc').value,
+    horaDbcc:                 document.getElementById('adminHoraDbcc').value,
+    diaSemanaIndices:         document.getElementById('adminDiaSemanaIndices').value,
+    horaIndices:              document.getElementById('adminHoraIndices').value,
+    thresholdSimpleGB:        parseInt(document.getElementById('adminThresholdSimpleGB').value)          || 0,
+    thresholdModificadoPercent: parseInt(document.getElementById('adminThresholdModificadoPercent').value) || 0,
+    thresholdLogPercent:      parseInt(document.getElementById('adminThresholdLogPercent').value)        || 0,
+    reservaMemoriaPercent:    parseInt(document.getElementById('adminReservaMemoriaPercent').value)      || 0,
+    alertaEspacoLivreGB:      parseInt(document.getElementById('adminAlertaEspacoLivreGB').value)       || 0,
+    alertaLogsCicloGB:        parseInt(document.getElementById('adminAlertaLogsCicloGB').value)         || 0,
+    espacoMinimoGB:           parseInt(document.getElementById('adminEspacoMinimoGB').value)            || 0,
+    maxDiasZip:               parseInt(document.getElementById('adminMaxDiasZip').value)                || 5,
+    maxDiasAnteriores:        parseInt(document.getElementById('adminMaxDiasAnteriores').value)         || 10,
+  };
+}
+
+function mostrarAdminMsg(txt, tipo) {
+  const el = document.getElementById('adminMsg');
+  el.textContent = txt;
+  el.className = 'admin-msg ' + tipo;
+  setTimeout(() => { el.className = 'admin-msg'; el.textContent = ''; }, 4000);
+}
+
+async function salvarConfigAdmin() {
+  if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
+  const payload = JSON.stringify(coletarFormAdmin());
+  try {
+    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': _adminPwd },
+      body: payload
+    });
+    if (resp.status === 401) { mostrarAdminMsg('Senha inválida.', 'err'); return; }
+    if (!resp.ok) { mostrarAdminMsg('Erro ao salvar: HTTP ' + resp.status, 'err'); return; }
+    document.getElementById('adminStatusBadge').textContent = '✓ Config remota ativa';
+    document.getElementById('adminStatusBadge').className   = 'admin-status ativa';
+    mostrarAdminMsg('✅ Config salva! Na próxima execução do motor, será aplicada automaticamente.', 'ok');
+  } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
+}
+
+async function limparConfigAdmin() {
+  if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
+  if (!confirm(`Remover config remota do banco "${_adminBanco}"? O motor voltará a usar appsettings.json local.`)) return;
+  try {
+    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Password': _adminPwd }
+    });
+    if (resp.status === 401) { mostrarAdminMsg('Senha inválida.', 'err'); return; }
+    document.getElementById('adminStatusBadge').textContent = 'Sem config remota';
+    document.getElementById('adminStatusBadge').className   = 'admin-status local';
+    preencherFormAdmin(null);
+    mostrarAdminMsg('🗑 Config removida. Motor voltará a usar appsettings.json.', 'ok');
+  } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
+}
 </script>
 </body>
 </html>
