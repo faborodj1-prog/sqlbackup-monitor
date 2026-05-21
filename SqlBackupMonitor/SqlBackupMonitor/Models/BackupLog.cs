@@ -29,4 +29,19 @@ public class BackupLog
     // ShrinkLog | ShrinkLogFalhou | AjusteMemoria | PressaoMemoria |
     // MudancaParaSimple | MudancaParaFull | FalhaFullPreSimple
     public string TipoOperacao { get; set; } = "Diferencial";
+
+    // ── Configuração de agendamento ──────────────────────────────────
+    public string DiasFull         { get; set; } = "";  // "Segunda,Quarta,Sexta"
+    public string HoraFull         { get; set; } = "";  // "01:00"
+    public string DiasIncremental  { get; set; } = "";  // "Terça,Quinta" (ou vazio = todos os dias)
+    public string JanelaFullInicio { get; set; } = "";  // "00:30"
+    public string JanelaFullFim    { get; set; } = "";  // "03:00"
+    public string DiaSemanaDbcc    { get; set; } = "";  // "Sábado"
+    public string HoraDbcc         { get; set; } = "";  // "23:00"
+    public string DiaSemanaIndices { get; set; } = "";  // "Domingo"
+    public string HoraIndices      { get; set; } = "";  // "02:00"
+
+    // ── Espaço em disco (drive da PastaBase) ─────────────────────────
+    public decimal EspacoLivreGB { get; set; }
+    public decimal EspacoTotalGB { get; set; }
 }

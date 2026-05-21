@@ -206,6 +206,18 @@
   .anom-detail.laranja  { background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.3); color:#f97316; }
   .anom-detail.vermelho { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#ef4444; }
   .card-tempo { font-size:8px; color:var(--muted); opacity:.5; margin-left:3px; }
+
+  /* ── CARD BODY — seções adicionais ── */
+  .card-section-title { font-size:8px; color:var(--muted); font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; margin:10px 0 4px; opacity:.6; }
+  .card-sched { display:grid; grid-template-columns:auto 1fr; gap:2px 8px; font-size:9px; }
+  .card-sched-key { color:var(--muted); white-space:nowrap; }
+  .card-sched-val { color:var(--text); font-weight:600; }
+  .card-disk { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .card-disk-bar-label { display:flex; justify-content:space-between; font-size:9px;
+    color:var(--muted); margin-bottom:4px; }
+  .card-disk-track { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .card-disk-fill  { height:100%; border-radius:2px; transition:width .6s ease; }
 </style>
 </head>
 <body>
@@ -463,6 +475,19 @@ function nr(r) {
     _key:    norm(r.clienteCNPJ || r.cliente || r.clienteNome || ''),
     _est:    r.estrategia     ?? r.Estrategia    ?? 'Simple',
     _op:     r.tipoOperacao   ?? r.TipoOperacao  ?? 'Diferencial',
+    // ── Agendamento ───────────────────────────────────────────────────
+    _diasFull:     r.diasFull         ?? '',
+    _horaFull:     r.horaFull         ?? '',
+    _diasInc:      r.diasIncremental  ?? '',
+    _janInicio:    r.janelaFullInicio ?? '',
+    _janFim:       r.janelaFullFim    ?? '',
+    _dbccDia:      r.diaSemanaDbcc    ?? '',
+    _dbccHora:     r.horaDbcc         ?? '',
+    _idxDia:       r.diaSemanaIndices ?? '',
+    _idxHora:      r.horaIndices      ?? '',
+    // ── Disco ─────────────────────────────────────────────────────────
+    _livreGB:  r.espacoLivreGB != null ? Number(r.espacoLivreGB) : null,
+    _totalGB:  r.espacoTotalGB != null ? Number(r.espacoTotalGB) : null,
   };
 }
 
@@ -474,34 +499,20 @@ let cardSelecionado = null;
 
 function onCardClick(el, event) {
   if (event) event.stopPropagation();
+  const _key        = el.dataset.key;
   const bancoNome   = el.dataset.banco;
   const clienteNome = el.dataset.nome;
   const clienteCNPJ = el.dataset.doc;
-  const _key        = el.dataset.key;
-  const jaAberto    = el.classList.contains('open');
 
-  // Fecha todos os outros cards abertos
-  document.querySelectorAll('#cardsContainer .card.open').forEach(c => {
-    if (c !== el) c.classList.remove('open');
-  });
-
-  // Toggle: se já estava aberto → fecha e desselecionado, para aqui
-  if (jaAberto) {
+  // Toggle: se já aberto → fecha e limpa filtro
+  if (el.classList.contains('open')) {
     el.classList.remove('open');
     desselecionarCard();
     return;
   }
 
-  // Abre o card
-  el.classList.add('open');
-
-  // Seleciona e filtra gráfico/histórico
+  // Seleciona para filtrar histórico
   cardSelecionado = { bancoNome, clienteNome, clienteCNPJ, _key };
-  document.querySelectorAll('#cardsContainer .card').forEach(c => {
-    const isMe = c.dataset.key === _key;
-    c.classList.toggle('selected', isMe);
-    c.classList.toggle('dimmed', !isMe);
-  });
   document.getElementById('bannerLabel').innerHTML =
     '<strong>' + clienteNome + '</strong><span class="filter-chip">🗄 ' + bancoNome + '</span>';
   document.getElementById('filterBanner').classList.add('visible');
@@ -512,9 +523,20 @@ function onCardClick(el, event) {
   document.getElementById('chartClienteLabel').textContent = clienteNome;
   document.getElementById('chartBancoLabel').textContent   = '🗄 ' + bancoNome;
   document.getElementById('chartTitle').textContent = 'Evolução — ' + clienteNome;
+
+  // Filtra histórico (não toca nos cards)
+  const histFiltrado = todosHistorico.filter(r => nr(r)._key === _key);
+  renderHistorico(histFiltrado);
+
+  // Abre o card diretamente no elemento clicado (sem re-renderizar cards)
+  document.querySelectorAll('#cardsContainer .card').forEach(c => {
+    const isMe = c.dataset.key === _key;
+    c.classList.toggle('selected', isMe);
+    c.classList.toggle('dimmed',   !isMe);
+    c.classList.toggle('open',     isMe);
+  });
+
   carregarGrafico();
-  aplicarFiltroCliente();
-  setTimeout(() => document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'start'}), 60);
 }
 
 
@@ -687,10 +709,52 @@ function renderCards(rows) {
       </div>` : `<div class="card-doc" style="margin-top:8px;opacity:.6">${r.statusLimite??r.StatusLimite??''}</div>`}
       <div class="card-msg" title="${r.mensagem??r.status??''}">${fmt.tipoOpIcon(n._op)}</div>
       ${fmt.cardCiclo(r)}
+      ${(() => {
+        // ── Seção Agendamento ──────────────────────────────────────
+        const hasSched = n._diasFull || n._horaFull || n._horas;
+        if (!hasSched) return '';
+        const fullInfo  = (n._diasFull ? n._diasFull : '—') + (n._horaFull ? ' às ' + n._horaFull : '');
+        const incInfo   = n._horas ? `a cada ${n._horas}h` : '—';
+        const janelaInfo = (n._janInicio && n._janFim) ? `${n._janInicio} → ${n._janFim}` : '';
+        const dbccInfo  = n._dbccDia  ? `${n._dbccDia} às ${n._dbccHora||'—'}`  : '';
+        const idxInfo   = n._idxDia   ? `${n._idxDia} às ${n._idxHora||'—'}`   : '';
+        let rows = `<div class="card-sched-key">FULL</div><div class="card-sched-val">${fullInfo}</div>`;
+        rows += `<div class="card-sched-key">Incremental</div><div class="card-sched-val">${incInfo}</div>`;
+        if (janelaInfo) rows += `<div class="card-sched-key">Janela</div><div class="card-sched-val">${janelaInfo}</div>`;
+        if (dbccInfo)   rows += `<div class="card-sched-key">DBCC</div><div class="card-sched-val">${dbccInfo}</div>`;
+        if (idxInfo)    rows += `<div class="card-sched-key">Índices</div><div class="card-sched-val">${idxInfo}</div>`;
+        return `<div class="card-section-title">Agendamento</div><div class="card-sched">${rows}</div>`;
+      })()}
+      ${(() => {
+        // ── Seção Disco ────────────────────────────────────────────
+        if (n._totalGB == null || n._totalGB <= 0) return '';
+        const pctUsado = Math.min(((n._totalGB - n._livreGB) / n._totalGB) * 100, 100);
+        const diskColor = n._livreGB < 5  ? 'var(--erro)'   :
+                          n._livreGB < 20 ? 'var(--alerta)' : 'var(--ok)';
+        const aviso = n._livreGB < 5  ? ' 🚨' : n._livreGB < 20 ? ' ⚠️' : '';
+        return `<div class="card-disk">
+          <div class="card-disk-bar-label">
+            <span>💽 Disco${aviso} — ${n._livreGB != null ? n._livreGB.toFixed(1) : '—'} GB livre de ${n._totalGB.toFixed(1)} GB</span>
+            <span style="color:${diskColor}">${pctUsado.toFixed(1)}% usado</span>
+          </div>
+          <div class="card-disk-track"><div class="card-disk-fill" style="width:${pctUsado.toFixed(1)}%;background:${diskColor}"></div></div>
+        </div>`;
+      })()}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
       </div><!-- /card-body -->
     </div>`;
   }).join('');
+
+  // Restaura open/selected/dimmed após re-render (renderCards recria o DOM)
+  if (cardSelecionado) {
+    const card = document.querySelector('#cardsContainer .card[data-key="' + cardSelecionado._key + '"]');
+    if (card) {
+      card.classList.add('open', 'selected');
+      document.querySelectorAll('#cardsContainer .card').forEach(c => {
+        if (c !== card) c.classList.add('dimmed');
+      });
+    }
+  }
 }
 
 async function carregarGrafico() {

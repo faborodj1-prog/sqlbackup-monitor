@@ -76,10 +76,21 @@ await using (var conn = new NpgsqlConnection(connStr))
     // Migration segura para tabelas já existentes — nunca perde dados
     await conn.ExecuteAsync(@"
         ALTER TABLE ""BackupLogs""
-            ADD COLUMN IF NOT EXISTS ""IntervalHoras""   INTEGER     DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS ""ProximaExecucao"" TIMESTAMPTZ,
-            ADD COLUMN IF NOT EXISTS ""Estrategia""      TEXT        DEFAULT 'Simple',
-            ADD COLUMN IF NOT EXISTS ""TipoOperacao""    TEXT        DEFAULT 'Diferencial';
+            ADD COLUMN IF NOT EXISTS ""IntervalHoras""    INTEGER       DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS ""ProximaExecucao""  TIMESTAMPTZ,
+            ADD COLUMN IF NOT EXISTS ""Estrategia""       TEXT          DEFAULT 'Simple',
+            ADD COLUMN IF NOT EXISTS ""TipoOperacao""     TEXT          DEFAULT 'Diferencial',
+            ADD COLUMN IF NOT EXISTS ""DiasFull""         TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""HoraFull""         TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""DiasIncremental""  TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""JanelaFullInicio"" TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""JanelaFullFim""    TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""DiaSemanaDbcc""    TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""HoraDbcc""         TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""DiaSemanaIndices"" TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""HoraIndices""      TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""EspacoLivreGB""    NUMERIC(10,3) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0;
     ");
 }
 
@@ -100,14 +111,24 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             ""Servidor"", ""Edicao"", ""Versao"", ""Recovery"",
             ""TamanhoDadosGB"", ""TamanhoLogGB"", ""PercentualExpress"", ""StatusLimite"",
             ""IntervalHoras"", ""ProximaExecucao"",
-            ""Estrategia"", ""TipoOperacao""
+            ""Estrategia"", ""TipoOperacao"",
+            ""DiasFull"", ""HoraFull"", ""DiasIncremental"",
+            ""JanelaFullInicio"", ""JanelaFullFim"",
+            ""DiaSemanaDbcc"", ""HoraDbcc"",
+            ""DiaSemanaIndices"", ""HoraIndices"",
+            ""EspacoLivreGB"", ""EspacoTotalGB""
         ) VALUES (
             @DataExecucao, @ClienteNome, @ClienteCNPJ,
             @BancoNome, @TipoBackup, @Status, @NomeArquivo, @Ciclo,
             @Servidor, @Edicao, @Versao, @Recovery,
             @TamanhoDadosGB, @TamanhoLogGB, @PercentualExpress, @StatusLimite,
             @IntervalHoras, @ProximaExecucao,
-            @Estrategia, @TipoOperacao
+            @Estrategia, @TipoOperacao,
+            @DiasFull, @HoraFull, @DiasIncremental,
+            @JanelaFullInicio, @JanelaFullFim,
+            @DiaSemanaDbcc, @HoraDbcc,
+            @DiaSemanaIndices, @HoraIndices,
+            @EspacoLivreGB, @EspacoTotalGB
         )", log);
 
     return Results.Ok(new { message = "Backup registrado com sucesso" });
