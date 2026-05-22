@@ -90,7 +90,8 @@ await using (var conn = new NpgsqlConnection(connStr))
             ADD COLUMN IF NOT EXISTS ""DiaSemanaIndices"" TEXT          DEFAULT '',
             ADD COLUMN IF NOT EXISTS ""HoraIndices""      TEXT          DEFAULT '',
             ADD COLUMN IF NOT EXISTS ""EspacoLivreGB""    NUMERIC(10,3) DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0;
+            ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS ""DrivesJson""       TEXT          DEFAULT '';
     ");
 
     // ── Tabela de configuração remota por cliente+banco ──────────────────────
@@ -143,7 +144,8 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             ""JanelaFullInicio"", ""JanelaFullFim"",
             ""DiaSemanaDbcc"", ""HoraDbcc"",
             ""DiaSemanaIndices"", ""HoraIndices"",
-            ""EspacoLivreGB"", ""EspacoTotalGB""
+            ""EspacoLivreGB"", ""EspacoTotalGB"",
+            ""DrivesJson""
         ) VALUES (
             @DataExecucao, @ClienteNome, @ClienteCNPJ,
             @BancoNome, @TipoBackup, @Status, @NomeArquivo, @Ciclo,
@@ -155,7 +157,8 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             @JanelaFullInicio, @JanelaFullFim,
             @DiaSemanaDbcc, @HoraDbcc,
             @DiaSemanaIndices, @HoraIndices,
-            @EspacoLivreGB, @EspacoTotalGB
+            @EspacoLivreGB, @EspacoTotalGB,
+            @DrivesJson
         )", log);
 
     return Results.Ok(new { message = "Backup registrado com sucesso" });

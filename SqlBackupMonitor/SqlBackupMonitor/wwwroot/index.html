@@ -771,6 +771,7 @@ function nr(r) {
     // ── Disco ─────────────────────────────────────────────────────────
     _livreGB:  r.espacoLivreGB != null ? Number(r.espacoLivreGB) : null,
     _totalGB:  r.espacoTotalGB != null ? Number(r.espacoTotalGB) : null,
+    _drives:   (() => { try { return JSON.parse(r.drivesJson || '[]'); } catch { return []; } })(),
   };
 }
 
@@ -1010,17 +1011,27 @@ function renderCards(rows) {
       })()}
       ${(() => {
         // ── Seção Disco ────────────────────────────────────────────
-        if (n._totalGB == null || n._totalGB <= 0) return '';
-        const pctUsado = Math.min(((n._totalGB - n._livreGB) / n._totalGB) * 100, 100);
-        const diskColor = n._livreGB < 5  ? 'var(--erro)'   :
-                          n._livreGB < 20 ? 'var(--alerta)' : 'var(--ok)';
-        const aviso = n._livreGB < 5  ? ' 🚨' : n._livreGB < 20 ? ' ⚠️' : '';
-        return `<div class="card-disk">
-          <div class="card-disk-bar-label">
-            <span>💽 Disco${aviso} — ${n._livreGB != null ? n._livreGB.toFixed(1) : '—'} GB livre de ${n._totalGB.toFixed(1)} GB</span>
-            <span style="color:${diskColor}">${pctUsado.toFixed(1)}% usado</span>
-          </div>
-          <div class="card-disk-track"><div class="card-disk-fill" style="width:${pctUsado.toFixed(1)}%;background:${diskColor}"></div></div>
+        // Prefere o array de drives (multi-drive); fallback para campo único
+        const drives = (n._drives && n._drives.length > 0)
+          ? n._drives
+          : (n._totalGB > 0 ? [{ l: '💽', livre: n._livreGB, total: n._totalGB }] : []);
+        if (!drives.length) return '';
+
+        const driveHtml = drives.map(d => {
+          const pct  = Math.min(((d.total - d.livre) / d.total) * 100, 100);
+          const col  = pct >= 90 ? 'var(--erro)'   :
+                       pct >= 80 ? 'var(--alerta)' : 'var(--ok)';
+          const icon = pct >= 90 ? ' 🚨' : pct >= 80 ? ' ⚠️' : '';
+          return `<div style="margin-bottom:4px">
+            <div class="card-disk-bar-label">
+              <span>💽 ${d.l}${icon} — ${d.livre.toFixed(1)} GB livre de ${d.total.toFixed(1)} GB</span>
+              <span style="color:${col}">${pct.toFixed(1)}% usado</span>
+            </div>
+            <div class="card-disk-track"><div class="card-disk-fill" style="width:${pct.toFixed(1)}%;background:${col}"></div></div>
+          </div>`;
+        }).join('');
+
+        return `<div class="card-disk">${driveHtml}
         </div>`;
       })()}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>

@@ -44,4 +44,8 @@ public class BackupLog
     // ── Espaço em disco (drive da PastaBase) ─────────────────────────
     public decimal EspacoLivreGB { get; set; }
     public decimal EspacoTotalGB { get; set; }
+
+    // ── Todos os drives fixos do servidor ─────────────────────────────
+    // JSON compacto: [{"l":"C:","livre":50.1,"total":200.0}, ...]
+    public string DrivesJson { get; set; } = "";
 }
