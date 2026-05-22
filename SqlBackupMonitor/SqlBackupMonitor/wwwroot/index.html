@@ -69,7 +69,17 @@
   .card.alerta::before         { background:var(--alerta); }
   .card.ciclo-atrasado { border-color:#f97316 !important; background:rgba(249,115,22,.06); animation:card-pulse-orange 3s ease-in-out infinite; }
   .card.anom-vermelho   { border-color:#ef4444 !important; background:rgba(239,68,68,.07); animation:card-pulse-red 2.5s ease-in-out infinite; }
-  .card.open.ciclo-atrasado,.card.open.anom-vermelho { animation:none; }
+  /* DBCC corruption — pulsação mais agressiva + borda mais grossa */
+  .card.corrupcao-dbcc  { border-color:#ef4444 !important; background:rgba(239,68,68,.11); animation:card-pulse-dbcc 1.6s ease-in-out infinite; }
+  .card.corrupcao-dbcc::before { background:linear-gradient(90deg,#b91c1c,#ef4444,#b91c1c) !important; background-size:200% !important; animation:dbcc-stripe 2s linear infinite !important; }
+  @keyframes card-pulse-dbcc{0%,100%{box-shadow:0 0 0 1px rgba(239,68,68,.3)}50%{box-shadow:0 0 0 5px rgba(239,68,68,.75),0 0 18px rgba(239,68,68,.25)}}
+  @keyframes dbcc-stripe{0%{background-position:0%}100%{background-position:200%}}
+  .card.open.ciclo-atrasado,.card.open.anom-vermelho,.card.open.corrupcao-dbcc { animation:none; }
+  /* badge ☠ DBCC */
+  .card-anom-badge.dbcc { background:rgba(239,68,68,.3); color:#ef4444; font-weight:900; letter-spacing:.4px; animation:blink 1s infinite; }
+  /* banner de corrupção no card body */
+  .corrupcao-banner { background:rgba(239,68,68,.13); border:1px solid rgba(239,68,68,.5); color:#ef4444; border-radius:4px; padding:8px 10px; margin-bottom:8px; font-size:10px; line-height:1.6; }
+  .corrupcao-banner strong { display:block; font-size:11px; margin-bottom:3px; letter-spacing:.3px; }
   @keyframes card-pulse-orange{0%,100%{box-shadow:0 0 0 1px rgba(249,115,22,.25)}50%{box-shadow:0 0 0 3px rgba(249,115,22,.6)}}
   @keyframes card-pulse-red{0%,100%{box-shadow:0 0 0 1px rgba(239,68,68,.25)}50%{box-shadow:0 0 0 3px rgba(239,68,68,.6)}}
   .card.ciclo-atrasado::before { background:linear-gradient(90deg,#f97316,#f59e0b) !important; }
@@ -953,6 +963,11 @@ function renderCards(rows) {
     const _pct  = Number(r.percentualExpress||r.PercentualExpress||0);
     const _cls  = (n._estado||'').toLowerCase();
     const anom  = (() => {
+      // ── DBCC corruption — prioridade máxima ──────────────────────────────
+      if (n._op==='CorrupcaoDetectada')
+        return {nivel:'vermelho', isCorrupcao:true,
+                motivo: n._msg || 'DBCC CHECKDB detectou corrupção no banco de dados'};
+      // ── Erros genéricos ───────────────────────────────────────────────────
       if (_cls==='erro') return {nivel:'vermelho', motivo:'Erro: '+n._msg};
       if (_isEx&&_pct>=_cP) return {nivel:'vermelho', motivo:'Express crítico '+_pct.toFixed(1)+'%'};
       if (n._prox&&new Date()>new Date(new Date(n._prox).getTime()+_tol*60000)) {
@@ -963,11 +978,22 @@ function renderCards(rows) {
       return null;
     })();
     const dotCls   = anom ? (anom.nivel==='vermelho'?'erro':'laranja') : fmt.cardCls(n._estado);
-    const anomBadge= anom ? '<span class="card-anom-badge '+anom.nivel+'">'+(anom.nivel==='vermelho'?'ERR':'AVS')+'</span>' : '';
-    const anomDetailHtml = anom ? '<div class="anom-detail '+anom.nivel+'"><b>'+(anom.nivel==='vermelho'?'🔴 Crítico':'🟠 Alerta')+':</b> '+anom.motivo+'</div>' : '';
+    const anomBadge= anom
+      ? '<span class="card-anom-badge '+(anom.isCorrupcao?'dbcc':anom.nivel)+'">'
+        +(anom.isCorrupcao?'☠ DBCC':anom.nivel==='vermelho'?'ERR':'AVS')+'</span>'
+      : '';
+    const anomDetailHtml = anom
+      ? (anom.isCorrupcao
+          ? `<div class="corrupcao-banner">
+               <strong>☠ DBCC CHECKDB — CORRUPÇÃO DETECTADA</strong>
+               ${anom.motivo}<br>
+               <span style="opacity:.8">Verifique o banco imediatamente. Backups anteriores copiados para <code>backup_salvo\\</code>.</span>
+             </div>`
+          : '<div class="anom-detail '+anom.nivel+'"><b>'+(anom.nivel==='vermelho'?'🔴 Crítico':'🟠 Alerta')+':</b> '+anom.motivo+'</div>')
+      : '';
     const tempo    = fmt.tempoRelativo ? fmt.tempoRelativo(n._dt) : '';
     const tempoTag = tempo ? '<span class="card-tempo">'+tempo+'</span>' : '';
-    return `<div class="card ${cls}${anom?(anom.nivel==='vermelho'?' anom-vermelho':' ciclo-atrasado'):''}${isSel?' selected':''}${isDim?' dimmed':''}"
+    return `<div class="card ${cls}${anom?(anom.isCorrupcao?' corrupcao-dbcc':anom.nivel==='vermelho'?' anom-vermelho':' ciclo-atrasado'):''}${isSel?' selected':''}${isDim?' dimmed':''}"
          data-banco="${n._banco}" data-nome="${n._nome}" data-doc="${n._doc}" data-key="${n._key}"
          onclick="onCardClick(this,event)">
       <div class="card-head-compact">
