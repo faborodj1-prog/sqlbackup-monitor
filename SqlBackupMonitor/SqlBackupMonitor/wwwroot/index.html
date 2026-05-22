@@ -212,9 +212,39 @@
     font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer;
     border-radius:4px; transition:border-color .2s; }
   .btn-admin:hover { border-color:#f59e0b; color:#f59e0b; }
+  /* Modal dois painéis */
   .admin-modal { background:var(--surface); border:1px solid var(--border2); border-radius:8px;
-    width:min(720px,96vw); max-height:92vh; display:flex; flex-direction:column;
+    width:min(960px,96vw); max-height:92vh; display:flex; flex-direction:column;
     box-shadow:0 24px 80px rgba(0,0,0,.7); }
+  .admin-2panel { display:flex; flex:1; overflow:hidden; min-height:0; }
+  /* Painel esquerdo: lista de clientes */
+  .admin-left { width:230px; flex-shrink:0; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden; }
+  .admin-left-header { padding:12px 12px 8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .admin-left-title { font-family:var(--ui); font-size:10px; font-weight:700; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .admin-search { width:100%; height:28px; background:var(--bg); border:1px solid var(--border2);
+    color:var(--text); font-family:var(--mono); font-size:11px; padding:0 8px;
+    border-radius:4px; outline:none; }
+  .admin-search:focus { border-color:var(--accent); }
+  .admin-cliente-list { flex:1; overflow-y:auto; }
+  .admin-cliente-list::-webkit-scrollbar { width:3px; }
+  .admin-cliente-list::-webkit-scrollbar-thumb { background:var(--border2); }
+  .admin-cliente-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);
+    transition:background .15s; border-left:2px solid transparent; }
+  .admin-cliente-item:hover { background:rgba(59,130,246,.07); }
+  .admin-cliente-item.sel { background:rgba(59,130,246,.1); border-left-color:var(--accent); }
+  .admin-cli-nome { font-family:var(--ui); font-size:11px; font-weight:700; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admin-cli-cnpj { font-size:9px; color:var(--accent); margin-top:1px; }
+  .admin-cli-meta { font-size:9px; color:var(--muted); margin-top:2px; display:flex; gap:6px; align-items:center; }
+  .admin-cli-badge { font-size:8px; padding:1px 5px; border-radius:8px;
+    background:rgba(34,197,94,.15); color:var(--ok); white-space:nowrap; }
+  /* Painel direito: formulário */
+  .admin-right { flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:12px; }
+  .admin-right-empty { flex:1; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:11px; opacity:.5; text-align:center; padding:20px; }
+  /* Form */
   .admin-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
   .admin-tab-btn { height:28px; padding:0 12px; background:var(--bg); border:1px solid var(--border2);
     color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
@@ -246,7 +276,7 @@
   .admin-status { font-size:10px; padding:3px 10px; border-radius:20px; font-weight:600; white-space:nowrap; }
   .admin-status.ativa  { background:rgba(34,197,94,.15); color:var(--ok); }
   .admin-status.local  { background:rgba(107,114,128,.15); color:var(--muted); }
-  .admin-msg { font-size:11px; padding:8px 12px; border-radius:4px; margin-top:8px; display:none; }
+  .admin-msg { font-size:11px; padding:8px 12px; border-radius:4px; margin-top:4px; display:none; }
   .admin-msg.ok  { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:var(--ok); display:block; }
   .admin-msg.err { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:var(--erro); display:block; }
 
@@ -439,178 +469,211 @@
   </div>
 </div>
 
-<!-- ── MODAL PAINEL ADMIN ───────────────────────────────────────── -->
+<!-- ── MODAL PAINEL ADMIN (dois painéis) ─────────────────────────── -->
 <div class="overlay" id="adminPanelOverlay" onclick="fecharPainelAdmin(event)">
   <div class="admin-modal">
     <div class="modal-header">
       <h2>⚙ Configuração Remota</h2>
       <button class="modal-close" onclick="document.getElementById('adminPanelOverlay').classList.remove('open')">×</button>
     </div>
-    <div class="modal-body">
 
-      <!-- Seletor de banco -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <div class="admin-field" style="flex:1;min-width:180px">
-          <label>Banco</label>
-          <select id="adminBancoSelect" onchange="carregarConfigAdmin(this.value)">
-            <option value="">Selecione o banco...</option>
-          </select>
+    <div class="admin-2panel">
+
+      <!-- ── Painel Esquerdo: Clientes ── -->
+      <div class="admin-left">
+        <div class="admin-left-header">
+          <div class="admin-left-title">Clientes</div>
+          <input type="text" id="adminClienteSearch" class="admin-search"
+                 placeholder="🔍 Nome ou documento..."
+                 oninput="filtrarClientesAdmin()"/>
         </div>
-        <div style="padding-top:16px">
-          <span id="adminStatusBadge" class="admin-status local">Sem config remota</span>
+        <div id="adminClienteList" class="admin-cliente-list">
+          <div class="loader" style="padding:20px;font-size:11px"><div class="spin"></div> Carregando...</div>
         </div>
       </div>
 
-      <!-- Mensagem de feedback -->
-      <div id="adminMsg" class="admin-msg"></div>
+      <!-- ── Painel Direito: Config do Banco ── -->
+      <div class="admin-right" id="adminRight">
 
-      <!-- Abas -->
-      <div class="admin-tabs">
-        <button class="admin-tab-btn active" onclick="showAdminTab('agendamento',this)">📅 Agendamento</button>
-        <button class="admin-tab-btn"        onclick="showAdminTab('manutencao',this)">🔧 Manutenção</button>
-        <button class="admin-tab-btn"        onclick="showAdminTab('thresholds',this)">📊 Thresholds</button>
-        <button class="admin-tab-btn"        onclick="showAdminTab('retencao',this)">🗄 Retenção</button>
-      </div>
+        <!-- placeholder enquanto nenhum cliente está selecionado -->
+        <div class="admin-right-empty" id="adminRightEmpty">
+          ← Selecione um cliente para configurar
+        </div>
 
-      <!-- ABA: Agendamento -->
-      <div id="adminTab-agendamento" class="admin-tab-content active">
-        <div class="admin-grid">
-          <div class="admin-field" style="grid-column:1/-1">
-            <label>Dias do FULL</label>
-            <div class="admin-dias" id="adminDiasFull">
-              <button class="admin-dia-btn" data-dia="Segunda"  onclick="toggleDia(this,'full')">Seg</button>
-              <button class="admin-dia-btn" data-dia="Terça"    onclick="toggleDia(this,'full')">Ter</button>
-              <button class="admin-dia-btn" data-dia="Quarta"   onclick="toggleDia(this,'full')">Qua</button>
-              <button class="admin-dia-btn" data-dia="Quinta"   onclick="toggleDia(this,'full')">Qui</button>
-              <button class="admin-dia-btn" data-dia="Sexta"    onclick="toggleDia(this,'full')">Sex</button>
-              <button class="admin-dia-btn" data-dia="Sábado"   onclick="toggleDia(this,'full')">Sáb</button>
-              <button class="admin-dia-btn" data-dia="Domingo"  onclick="toggleDia(this,'full')">Dom</button>
+        <!-- Conteúdo exibido após seleção -->
+        <div id="adminRightContent" style="display:none;flex-direction:column;gap:12px;">
+
+          <!-- Cabeçalho: nome do cliente + seletor de banco -->
+          <div style="border-bottom:1px solid var(--border);padding-bottom:12px;">
+            <div style="font-family:var(--ui);font-size:14px;font-weight:800;color:var(--text);margin-bottom:2px"
+                 id="adminCliNome">—</div>
+            <div style="font-size:10px;color:var(--accent);margin-bottom:10px" id="adminCliCnpj"></div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div class="admin-field" style="flex:1;min-width:160px">
+                <label>Banco</label>
+                <select id="adminBancoSelect" onchange="carregarConfigAdmin(this.value)">
+                  <option value="">Selecione o banco...</option>
+                </select>
+              </div>
+              <div style="padding-top:16px">
+                <span id="adminStatusBadge" class="admin-status local">Sem config remota</span>
+              </div>
             </div>
-            <span class="hint">Dias da semana em que o FULL será executado</span>
           </div>
-          <div class="admin-field">
-            <label>Hora do FULL</label>
-            <input type="time" id="adminHoraFull" value="01:00"/>
-            <span class="hint">Horário de início do FULL (HH:mm)</span>
-          </div>
-          <div class="admin-field">
-            <label>Intervalo Incremental (horas)</label>
-            <input type="number" id="adminIntervalHoras" min="1" max="24" value="2"/>
-            <span class="hint">Frequência de backups entre FULLs</span>
-          </div>
-          <div class="admin-field">
-            <label>Janela FULL — Início</label>
-            <input type="time" id="adminJanelaInicio" value="00:30"/>
-            <span class="hint">Início da janela segura para FULL emergencial</span>
-          </div>
-          <div class="admin-field">
-            <label>Janela FULL — Fim</label>
-            <input type="time" id="adminJanelaFim" value="03:00"/>
-            <span class="hint">Fim da janela segura para FULL emergencial</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- ABA: Manutenção -->
-      <div id="adminTab-manutencao" class="admin-tab-content">
-        <div class="admin-grid">
-          <div class="admin-field">
-            <label>Dia do DBCC CHECKDB</label>
-            <select id="adminDiaSemanaDbcc">
-              <option>Segunda</option><option>Terça</option><option>Quarta</option>
-              <option>Quinta</option><option>Sexta</option><option>Sábado</option><option>Domingo</option>
-            </select>
-            <span class="hint">Verificação de integridade do banco</span>
-          </div>
-          <div class="admin-field">
-            <label>Hora do DBCC</label>
-            <input type="time" id="adminHoraDbcc" value="23:00"/>
-          </div>
-          <div class="admin-field">
-            <label>Dia da Reorganização de Índices</label>
-            <select id="adminDiaSemanaIndices">
-              <option>Segunda</option><option>Terça</option><option>Quarta</option>
-              <option>Quinta</option><option>Sexta</option><option selected>Sábado</option><option>Domingo</option>
-            </select>
-            <span class="hint">Reorganize/Rebuild de índices fragmentados</span>
-          </div>
-          <div class="admin-field">
-            <label>Hora dos Índices</label>
-            <input type="time" id="adminHoraIndices" value="02:00"/>
-          </div>
-        </div>
-      </div>
+          <!-- Mensagem de feedback -->
+          <div id="adminMsg" class="admin-msg"></div>
 
-      <!-- ABA: Thresholds -->
-      <div id="adminTab-thresholds" class="admin-tab-content">
-        <div class="admin-grid">
-          <div class="admin-field">
-            <label>Alerta FULL+LOG — Tamanho (GB)</label>
-            <input type="number" id="adminThresholdSimpleGB" min="0" value="30"/>
-            <span class="hint">Banco acima disto recebe alerta para mudar para FULL+LOG. 0 = desativado</span>
+          <!-- Abas -->
+          <div class="admin-tabs">
+            <button class="admin-tab-btn active" onclick="showAdminTab('agendamento',this)">📅 Agendamento</button>
+            <button class="admin-tab-btn"        onclick="showAdminTab('manutencao',this)">🔧 Manutenção</button>
+            <button class="admin-tab-btn"        onclick="showAdminTab('thresholds',this)">📊 Thresholds</button>
+            <button class="admin-tab-btn"        onclick="showAdminTab('retencao',this)">🗄 Retenção</button>
           </div>
-          <div class="admin-field">
-            <label>Alerta FULL+LOG — Escrita (%)</label>
-            <input type="number" id="adminThresholdModificadoPercent" min="0" max="100" value="60"/>
-            <span class="hint">% de páginas modificadas que dispara alerta. 0 = desativado</span>
-          </div>
-          <div class="admin-field">
-            <label>Shrink do Log — Limite (% dos dados)</label>
-            <input type="number" id="adminThresholdLogPercent" min="0" value="150"/>
-            <span class="hint">Shrink se Log > dados × (este %). 0 = desativado</span>
-          </div>
-          <div class="admin-field">
-            <label>Reserva de Memória SQL Server (%)</label>
-            <input type="number" id="adminReservaMemoriaPercent" min="0" max="95" value="50"/>
-            <span class="hint">max server memory = RAM × (este %). 0 = desativado</span>
-          </div>
-          <div class="admin-field">
-            <label>Alerta Espaço Livre (GB)</label>
-            <input type="number" id="adminAlertaEspacoLivreGB" min="0" value="20"/>
-            <span class="hint">Alerta quando disco da PastaBase cair abaixo disto. 0 = desativado</span>
-          </div>
-          <div class="admin-field">
-            <label>Alerta LOGs do Ciclo (GB)</label>
-            <input type="number" id="adminAlertaLogsCicloGB" min="0" value="10"/>
-            <span class="hint">Alerta quando LOGs acumulados no ciclo ultrapassarem isto. 0 = desativado</span>
-          </div>
-          <div class="admin-field">
-            <label>Espaço Mínimo para Backup (GB)</label>
-            <input type="number" id="adminEspacoMinimoGB" min="0" value="5"/>
-            <span class="hint">Aborta backup se disco livre for menor que isto</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- ABA: Retenção -->
-      <div id="adminTab-retencao" class="admin-tab-content">
-        <div class="admin-grid">
-          <div class="admin-field">
-            <label>Retenção de ZIPs (dias)</label>
-            <input type="number" id="adminMaxDiasZip" min="1" value="5"/>
-            <span class="hint">ZIPs de ciclos mais antigos que isto são apagados</span>
+          <!-- ABA: Agendamento -->
+          <div id="adminTab-agendamento" class="admin-tab-content active">
+            <div class="admin-grid">
+              <div class="admin-field" style="grid-column:1/-1">
+                <label>Dias do FULL</label>
+                <div class="admin-dias" id="adminDiasFull">
+                  <button class="admin-dia-btn" data-dia="Segunda"  onclick="toggleDia(this)">Seg</button>
+                  <button class="admin-dia-btn" data-dia="Terça"    onclick="toggleDia(this)">Ter</button>
+                  <button class="admin-dia-btn" data-dia="Quarta"   onclick="toggleDia(this)">Qua</button>
+                  <button class="admin-dia-btn" data-dia="Quinta"   onclick="toggleDia(this)">Qui</button>
+                  <button class="admin-dia-btn" data-dia="Sexta"    onclick="toggleDia(this)">Sex</button>
+                  <button class="admin-dia-btn" data-dia="Sábado"   onclick="toggleDia(this)">Sáb</button>
+                  <button class="admin-dia-btn" data-dia="Domingo"  onclick="toggleDia(this)">Dom</button>
+                </div>
+                <span class="hint">Dias da semana em que o FULL será executado</span>
+              </div>
+              <div class="admin-field">
+                <label>Hora do FULL</label>
+                <input type="time" id="adminHoraFull" value="01:00"/>
+                <span class="hint">Horário de início do FULL (HH:mm)</span>
+              </div>
+              <div class="admin-field">
+                <label>Intervalo Incremental (horas)</label>
+                <input type="number" id="adminIntervalHoras" min="1" max="24" value="2"/>
+                <span class="hint">Frequência de backups entre FULLs</span>
+              </div>
+              <div class="admin-field">
+                <label>Janela FULL — Início</label>
+                <input type="time" id="adminJanelaInicio" value="00:30"/>
+                <span class="hint">Início da janela segura para FULL emergencial</span>
+              </div>
+              <div class="admin-field">
+                <label>Janela FULL — Fim</label>
+                <input type="time" id="adminJanelaFim" value="03:00"/>
+                <span class="hint">Fim da janela segura para FULL emergencial</span>
+              </div>
+            </div>
           </div>
-          <div class="admin-field">
-            <label>Busca de Ciclo Anterior (máx. dias)</label>
-            <input type="number" id="adminMaxDiasAnteriores" min="1" value="10"/>
-            <span class="hint">Janela para localizar o ciclo anterior e compactá-lo</span>
+
+          <!-- ABA: Manutenção -->
+          <div id="adminTab-manutencao" class="admin-tab-content">
+            <div class="admin-grid">
+              <div class="admin-field">
+                <label>Dia do DBCC CHECKDB</label>
+                <select id="adminDiaSemanaDbcc">
+                  <option>Segunda</option><option>Terça</option><option>Quarta</option>
+                  <option>Quinta</option><option>Sexta</option><option>Sábado</option><option>Domingo</option>
+                </select>
+                <span class="hint">Verificação de integridade do banco</span>
+              </div>
+              <div class="admin-field">
+                <label>Hora do DBCC</label>
+                <input type="time" id="adminHoraDbcc" value="23:00"/>
+              </div>
+              <div class="admin-field">
+                <label>Dia da Reorganização de Índices</label>
+                <select id="adminDiaSemanaIndices">
+                  <option>Segunda</option><option>Terça</option><option>Quarta</option>
+                  <option>Quinta</option><option>Sexta</option><option selected>Sábado</option><option>Domingo</option>
+                </select>
+                <span class="hint">Reorganize/Rebuild de índices fragmentados</span>
+              </div>
+              <div class="admin-field">
+                <label>Hora dos Índices</label>
+                <input type="time" id="adminHoraIndices" value="02:00"/>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="admin-sep"></div>
-        <p style="font-size:11px;color:var(--muted);line-height:1.6">
-          ℹ️ Os campos acima controlam apenas <b>agendamento e thresholds</b>.<br>
-          Dados de conexão (senha do banco, token Telegram, API key) permanecem
-          <b>apenas no appsettings.json local</b> do servidor — nunca são enviados ao monitor.
-        </p>
-      </div>
 
-      <!-- Ações -->
-      <div class="admin-actions">
-        <button class="btn-save" onclick="salvarConfigAdmin()">💾 Salvar config remota</button>
-        <button class="btn-del"  onclick="limparConfigAdmin()">🗑 Remover</button>
-      </div>
+          <!-- ABA: Thresholds -->
+          <div id="adminTab-thresholds" class="admin-tab-content">
+            <div class="admin-grid">
+              <div class="admin-field">
+                <label>Alerta FULL+LOG — Tamanho (GB)</label>
+                <input type="number" id="adminThresholdSimpleGB" min="0" value="30"/>
+                <span class="hint">Banco acima disto recebe alerta para mudar para FULL+LOG. 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Alerta FULL+LOG — Escrita (%)</label>
+                <input type="number" id="adminThresholdModificadoPercent" min="0" max="100" value="60"/>
+                <span class="hint">% de páginas modificadas que dispara alerta. 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Shrink do Log — Limite (% dos dados)</label>
+                <input type="number" id="adminThresholdLogPercent" min="0" value="150"/>
+                <span class="hint">Shrink se Log > dados × (este %). 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Reserva de Memória SQL Server (%)</label>
+                <input type="number" id="adminReservaMemoriaPercent" min="0" max="95" value="50"/>
+                <span class="hint">max server memory = RAM × (este %). 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Alerta Espaço Livre (GB)</label>
+                <input type="number" id="adminAlertaEspacoLivreGB" min="0" value="20"/>
+                <span class="hint">Alerta quando disco da PastaBase cair abaixo disto. 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Alerta LOGs do Ciclo (GB)</label>
+                <input type="number" id="adminAlertaLogsCicloGB" min="0" value="10"/>
+                <span class="hint">Alerta quando LOGs acumulados no ciclo ultrapassarem isto. 0 = desativado</span>
+              </div>
+              <div class="admin-field">
+                <label>Espaço Mínimo para Backup (GB)</label>
+                <input type="number" id="adminEspacoMinimoGB" min="0" value="5"/>
+                <span class="hint">Aborta backup se disco livre for menor que isto</span>
+              </div>
+            </div>
+          </div>
 
-    </div><!-- /modal-body -->
+          <!-- ABA: Retenção -->
+          <div id="adminTab-retencao" class="admin-tab-content">
+            <div class="admin-grid">
+              <div class="admin-field">
+                <label>Retenção de ZIPs (dias)</label>
+                <input type="number" id="adminMaxDiasZip" min="1" value="5"/>
+                <span class="hint">ZIPs de ciclos mais antigos que isto são apagados</span>
+              </div>
+              <div class="admin-field">
+                <label>Busca de Ciclo Anterior (máx. dias)</label>
+                <input type="number" id="adminMaxDiasAnteriores" min="1" value="10"/>
+                <span class="hint">Janela para localizar o ciclo anterior e compactá-lo</span>
+              </div>
+            </div>
+            <div class="admin-sep"></div>
+            <p style="font-size:11px;color:var(--muted);line-height:1.6">
+              ℹ️ Os campos acima controlam apenas <b>agendamento e thresholds</b>.<br>
+              Dados de conexão (senha, token Telegram, API key) permanecem
+              <b>apenas no appsettings.json local</b> do servidor — nunca enviados ao monitor.
+            </p>
+          </div>
+
+          <!-- Ações -->
+          <div class="admin-actions">
+            <button class="btn-save" onclick="salvarConfigAdmin()">💾 Salvar config remota</button>
+            <button class="btn-del"  onclick="limparConfigAdmin()">🗑 Remover</button>
+          </div>
+
+        </div><!-- /adminRightContent -->
+      </div><!-- /admin-right -->
+
+    </div><!-- /admin-2panel -->
   </div><!-- /admin-modal -->
 </div><!-- /adminPanelOverlay -->
 
@@ -1204,9 +1267,11 @@ setInterval(carregarTudo, 120_000);
 setInterval(() => { if (todosResumo.length) aplicarFiltroCliente(); }, 60_000);
 
 // ════════════════════════════════════════════════════════════════
-// ADMIN PANEL
+// ADMIN PANEL — Por cliente (CNPJ) + banco
 // ════════════════════════════════════════════════════════════════
-let _adminBanco = '';
+let _adminCliente = null;  // { cnpjNorm, cnpj, nome, temConfig }
+let _adminBanco   = '';
+let _todosClientes = [];
 
 function fecharPainelAdmin(e) {
   if (e.target === document.getElementById('adminPanelOverlay'))
@@ -1214,13 +1279,92 @@ function fecharPainelAdmin(e) {
 }
 
 async function abrirLoginAdmin() {
-  const bancos = await (await fetch('/api/bancos')).json();
+  document.getElementById('adminPanelOverlay').classList.add('open');
+  document.getElementById('adminClienteSearch').value = '';
+  await carregarClientesAdmin();
+}
+
+// ── Carrega lista de clientes do /api/clientes ────────────────
+async function carregarClientesAdmin() {
+  const el = document.getElementById('adminClienteList');
+  el.innerHTML = '<div class="loader" style="padding:20px;font-size:11px"><div class="spin"></div> Carregando...</div>';
+  try {
+    _todosClientes = await (await fetch('/api/clientes')).json();
+    filtrarClientesAdmin();
+  } catch(e) {
+    el.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--erro)">Erro ao carregar clientes.</div>';
+  }
+}
+
+function filtrarClientesAdmin() {
+  const q = (document.getElementById('adminClienteSearch').value || '').toLowerCase().replace(/[.\-\/\s]/g,'');
+  const filtrados = _todosClientes.filter(c => {
+    if (!q) return true;
+    return (c.nome||'').toLowerCase().includes(q) || (c.cnpjNorm||'').includes(q);
+  });
+  renderClientesAdmin(filtrados);
+}
+
+function renderClientesAdmin(clientes) {
+  const el = document.getElementById('adminClienteList');
+  if (!clientes.length) {
+    el.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--muted);text-align:center">Nenhum cliente encontrado.</div>';
+    return;
+  }
+  el.innerHTML = clientes.map(c => `
+    <div class="admin-cliente-item${_adminCliente?.cnpjNorm === c.cnpjNorm ? ' sel' : ''}"
+         data-cnpj="${c.cnpjNorm||''}"
+         onclick="selecionarClienteAdmin(this)">
+      <div class="admin-cli-nome" title="${c.nome||''}">${c.nome||'—'}</div>
+      <div class="admin-cli-cnpj">${c.cnpj||''}</div>
+      <div class="admin-cli-meta">
+        <span>${c.bancosCount||0} banco${(c.bancosCount||0)!==1?'s':''}</span>
+        ${c.temConfig ? '<span class="admin-cli-badge">⚙ config</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function selecionarClienteAdmin(el) {
+  const cnpjNorm = el.dataset.cnpj;
+  _adminCliente  = _todosClientes.find(c => (c.cnpjNorm||'') === cnpjNorm) || null;
+  _adminBanco    = '';
+
+  // Marca selecionado na lista
+  document.querySelectorAll('.admin-cliente-item').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+
+  // Mostra painel direito
+  document.getElementById('adminRightEmpty').style.display   = 'none';
+  document.getElementById('adminRightContent').style.display = 'flex';
+
+  // Preenche cabeçalho
+  document.getElementById('adminCliNome').textContent = _adminCliente?.nome || '—';
+  document.getElementById('adminCliCnpj').textContent = _adminCliente?.cnpj || '';
+
+  // Popula seletor de bancos com os bancos deste cliente (de todosResumo em memória)
   const sel = document.getElementById('adminBancoSelect');
   sel.innerHTML = '<option value="">Selecione o banco...</option>';
-  bancos.forEach(b => { const o = document.createElement('option'); o.value = o.textContent = b; sel.appendChild(o); });
+  const bancos = [...new Set(
+    todosResumo
+      .filter(r => {
+        const n = nr(r);
+        return n._key === cnpjNorm || (!cnpjNorm && !n._key);
+      })
+      .map(r => nr(r)._banco)
+      .filter(b => b && b !== '—')
+  )].sort();
+  bancos.forEach(b => {
+    const o = document.createElement('option');
+    o.value = o.textContent = b;
+    sel.appendChild(o);
+  });
+
+  // Reseta badge e form
+  document.getElementById('adminStatusBadge').textContent = 'Sem config remota';
+  document.getElementById('adminStatusBadge').className   = 'admin-status local';
   document.getElementById('adminMsg').className = 'admin-msg';
   document.getElementById('adminMsg').textContent = '';
-  document.getElementById('adminPanelOverlay').classList.add('open');
+  preencherFormAdmin(null);
 }
 
 function showAdminTab(tab, btn) {
@@ -1230,11 +1374,9 @@ function showAdminTab(tab, btn) {
   if (btn) btn.classList.add('active');
 }
 
-function toggleDia(btn, group) {
-  btn.classList.toggle('sel');
-}
+function toggleDia(btn) { btn.classList.toggle('sel'); }
 
-function setDiasSelecionados(dias, group) {
+function setDiasSelecionados(dias) {
   document.querySelectorAll('#adminDiasFull .admin-dia-btn').forEach(btn => {
     btn.classList.toggle('sel', (dias||[]).some(d => d.toLowerCase() === btn.dataset.dia.toLowerCase()));
   });
@@ -1245,8 +1387,8 @@ function getDiasSelecionados() {
 }
 
 function setSelectValue(id, val) {
-  const sel = document.getElementById(id);
   if (!val) return;
+  const sel = document.getElementById(id);
   for (const o of sel.options) { if (o.value === val) { sel.value = val; return; } }
 }
 
@@ -1255,10 +1397,13 @@ async function carregarConfigAdmin(banco) {
   const badge = document.getElementById('adminStatusBadge');
   const msg   = document.getElementById('adminMsg');
   msg.className = 'admin-msg'; msg.textContent = '';
-  if (!banco) { badge.textContent = 'Sem config remota'; badge.className = 'admin-status local'; return; }
-
+  if (!banco || !_adminCliente) {
+    badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
+    return;
+  }
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
   try {
-    const resp = await fetch(`/api/config/${encodeURIComponent(banco)}`);
+    const resp = await fetch(`/api/config/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(banco)}`);
     if (resp.status === 404) {
       badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
       preencherFormAdmin(null);
@@ -1275,47 +1420,48 @@ async function carregarConfigAdmin(banco) {
 
 function preencherFormAdmin(cfg) {
   const v = cfg ?? {};
-  setDiasSelecionados(v.diasFull ?? [], 'full');
-  document.getElementById('adminHoraFull').value                  = v.horaFull              ?? '01:00';
-  document.getElementById('adminIntervalHoras').value             = v.intervalHoras          ?? 2;
-  document.getElementById('adminJanelaInicio').value              = v.janelaFullInicio       ?? '00:30';
-  document.getElementById('adminJanelaFim').value                 = v.janelaFullFim          ?? '03:00';
+  setDiasSelecionados(v.diasFull ?? []);
+  document.getElementById('adminHoraFull').value                   = v.horaFull              ?? '01:00';
+  document.getElementById('adminIntervalHoras').value              = v.intervalHoras          ?? 2;
+  document.getElementById('adminJanelaInicio').value               = v.janelaFullInicio       ?? '00:30';
+  document.getElementById('adminJanelaFim').value                  = v.janelaFullFim          ?? '03:00';
   setSelectValue('adminDiaSemanaDbcc',    v.diaSemanaDbcc    ?? 'Sábado');
-  document.getElementById('adminHoraDbcc').value                  = v.horaDbcc               ?? '23:00';
+  document.getElementById('adminHoraDbcc').value                   = v.horaDbcc               ?? '23:00';
   setSelectValue('adminDiaSemanaIndices', v.diaSemanaIndices ?? 'Domingo');
-  document.getElementById('adminHoraIndices').value               = v.horaIndices            ?? '02:00';
-  document.getElementById('adminThresholdSimpleGB').value         = v.thresholdSimpleGB       ?? 30;
-  document.getElementById('adminThresholdModificadoPercent').value= v.thresholdModificadoPercent ?? 60;
-  document.getElementById('adminThresholdLogPercent').value       = v.thresholdLogPercent    ?? 150;
-  document.getElementById('adminReservaMemoriaPercent').value     = v.reservaMemoriaPercent  ?? 50;
-  document.getElementById('adminAlertaEspacoLivreGB').value       = v.alertaEspacoLivreGB   ?? 20;
-  document.getElementById('adminAlertaLogsCicloGB').value         = v.alertaLogsCicloGB     ?? 10;
-  document.getElementById('adminEspacoMinimoGB').value            = v.espacoMinimoGB         ?? 5;
-  document.getElementById('adminMaxDiasZip').value                = v.maxDiasZip             ?? 5;
-  document.getElementById('adminMaxDiasAnteriores').value         = v.maxDiasAnteriores      ?? 10;
+  document.getElementById('adminHoraIndices').value                = v.horaIndices            ?? '02:00';
+  document.getElementById('adminThresholdSimpleGB').value          = v.thresholdSimpleGB       ?? 30;
+  document.getElementById('adminThresholdModificadoPercent').value = v.thresholdModificadoPercent ?? 60;
+  document.getElementById('adminThresholdLogPercent').value        = v.thresholdLogPercent    ?? 150;
+  document.getElementById('adminReservaMemoriaPercent').value      = v.reservaMemoriaPercent  ?? 50;
+  document.getElementById('adminAlertaEspacoLivreGB').value        = v.alertaEspacoLivreGB   ?? 20;
+  document.getElementById('adminAlertaLogsCicloGB').value          = v.alertaLogsCicloGB     ?? 10;
+  document.getElementById('adminEspacoMinimoGB').value             = v.espacoMinimoGB         ?? 5;
+  document.getElementById('adminMaxDiasZip').value                 = v.maxDiasZip             ?? 5;
+  document.getElementById('adminMaxDiasAnteriores').value          = v.maxDiasAnteriores      ?? 10;
 }
 
 function coletarFormAdmin() {
   return {
+    clienteNome:              _adminCliente?.nome ?? '',
     diasFull:                 getDiasSelecionados(),
     horaFull:                 document.getElementById('adminHoraFull').value,
     diasIncremental:          [],
-    intervalHoras:            parseInt(document.getElementById('adminIntervalHoras').value) || 2,
+    intervalHoras:            parseInt(document.getElementById('adminIntervalHoras').value)            || 2,
     janelaFullInicio:         document.getElementById('adminJanelaInicio').value,
     janelaFullFim:            document.getElementById('adminJanelaFim').value,
     diaSemanaDbcc:            document.getElementById('adminDiaSemanaDbcc').value,
     horaDbcc:                 document.getElementById('adminHoraDbcc').value,
     diaSemanaIndices:         document.getElementById('adminDiaSemanaIndices').value,
     horaIndices:              document.getElementById('adminHoraIndices').value,
-    thresholdSimpleGB:        parseInt(document.getElementById('adminThresholdSimpleGB').value)          || 0,
+    thresholdSimpleGB:        parseInt(document.getElementById('adminThresholdSimpleGB').value)         || 0,
     thresholdModificadoPercent: parseInt(document.getElementById('adminThresholdModificadoPercent').value) || 0,
-    thresholdLogPercent:      parseInt(document.getElementById('adminThresholdLogPercent').value)        || 0,
-    reservaMemoriaPercent:    parseInt(document.getElementById('adminReservaMemoriaPercent').value)      || 0,
-    alertaEspacoLivreGB:      parseInt(document.getElementById('adminAlertaEspacoLivreGB').value)       || 0,
-    alertaLogsCicloGB:        parseInt(document.getElementById('adminAlertaLogsCicloGB').value)         || 0,
-    espacoMinimoGB:           parseInt(document.getElementById('adminEspacoMinimoGB').value)            || 0,
-    maxDiasZip:               parseInt(document.getElementById('adminMaxDiasZip').value)                || 5,
-    maxDiasAnteriores:        parseInt(document.getElementById('adminMaxDiasAnteriores').value)         || 10,
+    thresholdLogPercent:      parseInt(document.getElementById('adminThresholdLogPercent').value)       || 0,
+    reservaMemoriaPercent:    parseInt(document.getElementById('adminReservaMemoriaPercent').value)     || 0,
+    alertaEspacoLivreGB:      parseInt(document.getElementById('adminAlertaEspacoLivreGB').value)      || 0,
+    alertaLogsCicloGB:        parseInt(document.getElementById('adminAlertaLogsCicloGB').value)        || 0,
+    espacoMinimoGB:           parseInt(document.getElementById('adminEspacoMinimoGB').value)           || 0,
+    maxDiasZip:               parseInt(document.getElementById('adminMaxDiasZip').value)               || 5,
+    maxDiasAnteriores:        parseInt(document.getElementById('adminMaxDiasAnteriores').value)        || 10,
   };
 }
 
@@ -1323,34 +1469,42 @@ function mostrarAdminMsg(txt, tipo) {
   const el = document.getElementById('adminMsg');
   el.textContent = txt;
   el.className = 'admin-msg ' + tipo;
-  setTimeout(() => { el.className = 'admin-msg'; el.textContent = ''; }, 4000);
+  setTimeout(() => { el.className = 'admin-msg'; el.textContent = ''; }, 5000);
 }
 
 async function salvarConfigAdmin() {
-  if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
+  if (!_adminCliente) { mostrarAdminMsg('Selecione um cliente primeiro.', 'err'); return; }
+  if (!_adminBanco)   { mostrarAdminMsg('Selecione um banco primeiro.', 'err');   return; }
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
   try {
-    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, {
-      method: 'PUT',
+    const resp = await fetch(`/api/config/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(_adminBanco)}`, {
+      method:  'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(coletarFormAdmin())
+      body:    JSON.stringify(coletarFormAdmin())
     });
     if (!resp.ok) { mostrarAdminMsg('Erro ao salvar: HTTP ' + resp.status, 'err'); return; }
     document.getElementById('adminStatusBadge').textContent = '✓ Config remota ativa';
     document.getElementById('adminStatusBadge').className   = 'admin-status ativa';
-    mostrarAdminMsg('✅ Config salva! Na próxima execução do motor será aplicada automaticamente.', 'ok');
+    mostrarAdminMsg('✅ Config salva! Será aplicada na próxima execução do motor.', 'ok');
+    // Atualiza badge na lista de clientes
+    if (_adminCliente) _adminCliente.temConfig = true;
+    filtrarClientesAdmin();
   } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
 }
 
 async function limparConfigAdmin() {
-  if (!_adminBanco) { mostrarAdminMsg('Selecione um banco primeiro.', 'err'); return; }
-  if (!confirm(`Remover config remota do banco "${_adminBanco}"? O motor voltará a usar appsettings.json local.`)) return;
+  if (!_adminCliente) { mostrarAdminMsg('Selecione um cliente primeiro.', 'err'); return; }
+  if (!_adminBanco)   { mostrarAdminMsg('Selecione um banco primeiro.', 'err');   return; }
+  if (!confirm(`Remover config remota do banco "${_adminBanco}" (${_adminCliente.nome})?\nO motor voltará a usar appsettings.json local.`)) return;
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
   try {
-    const resp = await fetch(`/api/config/${encodeURIComponent(_adminBanco)}`, { method: 'DELETE' });
+    const resp = await fetch(`/api/config/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(_adminBanco)}`, { method: 'DELETE' });
     if (!resp.ok && resp.status !== 404) { mostrarAdminMsg('Erro: HTTP ' + resp.status, 'err'); return; }
     document.getElementById('adminStatusBadge').textContent = 'Sem config remota';
     document.getElementById('adminStatusBadge').className   = 'admin-status local';
     preencherFormAdmin(null);
     mostrarAdminMsg('🗑 Config removida. Motor voltará a usar appsettings.json.', 'ok');
+    await carregarClientesAdmin();
   } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
 }
 </script>

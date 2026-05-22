@@ -93,13 +93,31 @@ await using (var conn = new NpgsqlConnection(connStr))
             ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0;
     ");
 
-    // ── Tabela de configuração remota por banco ───────────────────────────────
+    // ── Tabela de configuração remota por cliente+banco ──────────────────────
+    // Migration segura: se existir tabela antiga (chave só BancoNome), recria.
     await conn.ExecuteAsync(@"
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name = 'BackupConfigs'
+            ) AND NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'BackupConfigs' AND column_name = 'ClienteCNPJ'
+            ) THEN
+                DROP TABLE ""BackupConfigs"";
+            END IF;
+        END $$;
+
         CREATE TABLE IF NOT EXISTS ""BackupConfigs"" (
-            ""BancoNome""   TEXT PRIMARY KEY,
-            ""ConfigJson""  TEXT NOT NULL,
-            ""UpdatedAt""   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            ""ClienteCNPJ""  TEXT NOT NULL DEFAULT '',
+            ""ClienteNome""  TEXT NOT NULL DEFAULT '',
+            ""BancoNome""    TEXT NOT NULL,
+            ""ConfigJson""   TEXT NOT NULL,
+            ""UpdatedAt""    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (""ClienteCNPJ"", ""BancoNome"")
         );
+        CREATE INDEX IF NOT EXISTS idx_bc_cnpj ON ""BackupConfigs""(""ClienteCNPJ"");
     ");
 }
 
@@ -391,39 +409,70 @@ app.MapGet("/api/memoria", async (string? banco = null, int dias = 30) =>
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// GET /api/config — lista bancos com config remota (público)
+// GET /api/clientes — lista clientes distintos dos BackupLogs
+// Retorna: cnpjNorm, cnpj, nome, ultimoEvento, bancosCount, temConfig
+// ════════════════════════════════════════════════════════════════════════════
+app.MapGet("/api/clientes", async () =>
+{
+    await using var conn = new NpgsqlConnection(connStr);
+    var rows = await conn.QueryAsync(@"
+        SELECT
+            cnpj_norm                                   AS ""cnpjNorm"",
+            MAX(""ClienteCNPJ"")                        AS ""cnpj"",
+            MAX(""ClienteNome"")                        AS ""nome"",
+            MAX(""DataExecucao"")                       AS ""ultimoEvento"",
+            COUNT(DISTINCT ""BancoNome"")               AS ""bancosCount"",
+            EXISTS (
+                SELECT 1 FROM ""BackupConfigs"" bc
+                WHERE bc.""ClienteCNPJ"" = cnpj_norm
+            )                                           AS ""temConfig""
+        FROM (
+            SELECT *,
+                REGEXP_REPLACE(COALESCE(""ClienteCNPJ"", ''), '[^0-9]', '', 'g') AS cnpj_norm
+            FROM ""BackupLogs""
+            WHERE ""ClienteNome"" IS NOT NULL AND ""ClienteNome"" <> ''
+        ) sub
+        GROUP BY cnpj_norm
+        ORDER BY MAX(""DataExecucao"") DESC");
+    return Results.Ok(rows);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/config — lista clientes que possuem config remota
 // ════════════════════════════════════════════════════════════════════════════
 app.MapGet("/api/config", async () =>
 {
     await using var conn = new NpgsqlConnection(connStr);
-    var bancos = await conn.QueryAsync<string>(@"
-        SELECT ""BancoNome"" FROM ""BackupConfigs"" ORDER BY ""BancoNome""");
-    return Results.Ok(bancos);
+    var rows = await conn.QueryAsync(@"
+        SELECT ""ClienteCNPJ"" AS ""cnpjNorm"",
+               MAX(""ClienteNome"") AS ""nome"",
+               COUNT(*) AS ""bancosCount""
+        FROM ""BackupConfigs""
+        GROUP BY ""ClienteCNPJ""
+        ORDER BY MAX(""ClienteNome"")");
+    return Results.Ok(rows);
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// GET /api/config/{banco} — retorna config de um banco (público)
-// Usado pelo SqlBackup.exe (ConfigSync) e pelo painel admin
+// GET /api/config/{cnpjNorm}/{banco} — retorna config de um banco (público)
+// Usado pelo SqlBackup.exe (ConfigSync.cs) — autenticado por X-Api-Key
 // ════════════════════════════════════════════════════════════════════════════
-app.MapGet("/api/config/{banco}", async (string banco) =>
+app.MapGet("/api/config/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco, HttpContext ctx) =>
 {
+    // Aceita tanto requisições autenticadas (ConfigSync) quanto do painel admin
+    if (ctx.Request.Headers.TryGetValue("X-Api-Key", out var key) && key != apiKey)
+        return Results.Unauthorized();
 
     await using var conn = new NpgsqlConnection(connStr);
     var row = await conn.QueryFirstOrDefaultAsync<(string ConfigJson, DateTime UpdatedAt)>(
-        @"SELECT ""ConfigJson"", ""UpdatedAt"" FROM ""BackupConfigs"" WHERE ""BancoNome"" = @banco",
-        new { banco });
+        @"SELECT ""ConfigJson"", ""UpdatedAt"" FROM ""BackupConfigs""
+          WHERE ""ClienteCNPJ"" = @cnpjNorm AND ""BancoNome"" = @banco",
+        new { cnpjNorm, banco });
 
     if (row.ConfigJson == null) return Results.NotFound();
 
-    // Retorna o JSON armazenado + UpdatedAt como envelope
-    var cfg  = System.Text.Json.JsonDocument.Parse(row.ConfigJson).RootElement;
-    var resp = System.Text.Json.JsonSerializer.Serialize(new
-    {
-        updatedAt = row.UpdatedAt,
-        config    = cfg
-    });
     // Achata: mescla updatedAt dentro do objeto de config
-    var doc  = System.Text.Json.JsonDocument.Parse(row.ConfigJson);
+    var doc = System.Text.Json.JsonDocument.Parse(row.ConfigJson);
     using var ms  = new System.IO.MemoryStream();
     using var wrt = new System.Text.Json.Utf8JsonWriter(ms);
     wrt.WriteStartObject();
@@ -431,52 +480,64 @@ app.MapGet("/api/config/{banco}", async (string banco) =>
     wrt.WriteString("updatedAt", row.UpdatedAt);
     wrt.WriteEndObject();
     wrt.Flush();
-    var merged = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-
-    return Results.Content(merged, "application/json");
+    return Results.Content(System.Text.Encoding.UTF8.GetString(ms.ToArray()), "application/json");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// PUT /api/config/{banco} — salva ou atualiza config remota (público)
-// Payload: JSON com os campos não-sensíveis (agendamento + thresholds)
+// PUT /api/config/{cnpjNorm}/{banco} — salva ou atualiza config remota
+// Payload: JSON com campos não-sensíveis + clienteNome opcional
 // ════════════════════════════════════════════════════════════════════════════
-app.MapPut("/api/config/{banco}", async (string banco, HttpContext ctx) =>
+app.MapPut("/api/config/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco, HttpContext ctx) =>
 {
-
-    using var sr   = new System.IO.StreamReader(ctx.Request.Body);
-    var body       = await sr.ReadToEndAsync();
+    using var sr = new System.IO.StreamReader(ctx.Request.Body);
+    var body     = await sr.ReadToEndAsync();
     if (string.IsNullOrWhiteSpace(body)) return Results.BadRequest("Payload vazio.");
 
-    // Valida que é JSON válido
-    try { System.Text.Json.JsonDocument.Parse(body); }
+    // Extrai clienteNome do payload e reconstrói JSON sem ele
+    string clienteNome = "";
+    string configJson;
+    try
+    {
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(body);
+        if (jsonDoc.RootElement.TryGetProperty("clienteNome", out var cn))
+            clienteNome = cn.GetString() ?? "";
+
+        using var ms  = new System.IO.MemoryStream();
+        using var wrt = new System.Text.Json.Utf8JsonWriter(ms);
+        wrt.WriteStartObject();
+        foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+            if (prop.Name != "clienteNome") prop.WriteTo(wrt);
+        wrt.WriteEndObject();
+        wrt.Flush();
+        configJson = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+    }
     catch { return Results.BadRequest("JSON inválido."); }
 
     await using var conn = new NpgsqlConnection(connStr);
     await conn.ExecuteAsync(@"
-        INSERT INTO ""BackupConfigs"" (""BancoNome"", ""ConfigJson"", ""UpdatedAt"")
-        VALUES (@banco, @body, NOW())
-        ON CONFLICT (""BancoNome"") DO UPDATE
-            SET ""ConfigJson"" = EXCLUDED.""ConfigJson"",
-                ""UpdatedAt""  = NOW()",
-        new { banco, body });
+        INSERT INTO ""BackupConfigs"" (""ClienteCNPJ"", ""ClienteNome"", ""BancoNome"", ""ConfigJson"", ""UpdatedAt"")
+        VALUES (@cnpjNorm, @clienteNome, @banco, @configJson, NOW())
+        ON CONFLICT (""ClienteCNPJ"", ""BancoNome"") DO UPDATE
+            SET ""ConfigJson""  = EXCLUDED.""ConfigJson"",
+                ""ClienteNome"" = EXCLUDED.""ClienteNome"",
+                ""UpdatedAt""   = NOW()",
+        new { cnpjNorm, clienteNome, banco, configJson });
 
-    return Results.Ok(new { message = $"Config do banco '{banco}' atualizada." });
+    return Results.Ok(new { message = $"Config de '{banco}' salva." });
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// DELETE /api/config/{banco} — remove config remota (público)
-// Após remoção, o SqlBackup.exe voltará a usar appsettings.json local
+// DELETE /api/config/{cnpjNorm}/{banco} — remove config remota
 // ════════════════════════════════════════════════════════════════════════════
-app.MapDelete("/api/config/{banco}", async (string banco) =>
+app.MapDelete("/api/config/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco) =>
 {
-
     await using var conn = new NpgsqlConnection(connStr);
-    var rows = await conn.ExecuteAsync(
-        @"DELETE FROM ""BackupConfigs"" WHERE ""BancoNome"" = @banco", new { banco });
-
-    return rows > 0
-        ? Results.Ok(new { message = $"Config do banco '{banco}' removida." })
-        : Results.NotFound(new { message = "Banco não encontrado." });
+    var affected = await conn.ExecuteAsync(
+        @"DELETE FROM ""BackupConfigs"" WHERE ""ClienteCNPJ"" = @cnpjNorm AND ""BancoNome"" = @banco",
+        new { cnpjNorm, banco });
+    return affected > 0
+        ? Results.Ok(new { message = "Config removida." })
+        : Results.NotFound(new { message = "Config não encontrada." });
 });
 
 // Fallback → index.html (SPA)
