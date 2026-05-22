@@ -277,8 +277,9 @@
   .admin-status.ativa  { background:rgba(34,197,94,.15); color:var(--ok); }
   .admin-status.local  { background:rgba(107,114,128,.15); color:var(--muted); }
   .admin-msg { font-size:11px; padding:8px 12px; border-radius:4px; margin-top:4px; display:none; }
-  .admin-msg.ok  { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:var(--ok); display:block; }
-  .admin-msg.err { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:var(--erro); display:block; }
+  .admin-msg.ok   { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:var(--ok);   display:block; }
+  .admin-msg.err  { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:var(--erro); display:block; }
+  .admin-msg.info { background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.3); color:#60a5fa;     display:block; }
 
   /* ── CARD BODY — seções adicionais ── */
   .card-section-title { font-size:8px; color:var(--muted); font-weight:700; letter-spacing:1px;
@@ -1341,11 +1342,12 @@ function selecionarClienteAdmin(el) {
   document.getElementById('adminCliNome').textContent = _adminCliente?.nome || '—';
   document.getElementById('adminCliCnpj').textContent = _adminCliente?.cnpj || '';
 
-  // Popula seletor de bancos com os bancos deste cliente (de todosResumo em memória)
+  // Popula seletor de bancos com todos os bancos deste cliente (de todosHistorico —
+  // usa o histórico completo e não todosResumo, que só guarda 1 entrada por CNPJ)
   const sel = document.getElementById('adminBancoSelect');
   sel.innerHTML = '<option value="">Selecione o banco...</option>';
   const bancos = [...new Set(
-    todosResumo
+    todosHistorico
       .filter(r => {
         const n = nr(r);
         return n._key === cnpjNorm || (!cnpjNorm && !n._key);
@@ -1406,7 +1408,14 @@ async function carregarConfigAdmin(banco) {
     const resp = await fetch(`/api/config/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(banco)}`);
     if (resp.status === 404) {
       badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
-      preencherFormAdmin(null);
+      // Sem config remota: pré-preenche com os valores reais do último backup
+      // reportado por este banco, para facilitar o ajuste e salvar.
+      const cfgReal = configDoUltimoLog(cnpjNorm, banco);
+      preencherFormAdmin(cfgReal);
+      if (cfgReal) {
+        msg.className   = 'admin-msg info';
+        msg.textContent = '📋 Formulário pré-preenchido com a configuração atual do backup — ajuste se necessário e salve.';
+      }
       return;
     }
     const cfg = await resp.json();
@@ -1414,8 +1423,37 @@ async function carregarConfigAdmin(banco) {
     preencherFormAdmin(cfg);
   } catch(e) {
     badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
-    preencherFormAdmin(null);
+    preencherFormAdmin(configDoUltimoLog(cnpjNorm, banco));
   }
+}
+
+// Busca o último log deste cliente+banco no histórico e mapeia para o formato
+// esperado por preencherFormAdmin(). Retorna null se nenhum log encontrado.
+// Apenas campos de agendamento são mapeados (thresholds/retenção não estão no log).
+function configDoUltimoLog(cnpjNorm, banco) {
+  const log = todosHistorico
+    .filter(r => {
+      const n = nr(r);
+      return n._banco === banco && (n._key === cnpjNorm || (!cnpjNorm && !n._key));
+    })
+    .sort((a, b) => new Date(b.dataExecucao ?? 0) - new Date(a.dataExecucao ?? 0))[0];
+
+  if (!log) return null;
+
+  const cfg = {};
+  // DiasFull vem como CSV "Segunda,Quinta" no log → converter para array
+  const dias = (log.diasFull || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (dias.length)            cfg.diasFull         = dias;
+  if (log.horaFull)           cfg.horaFull         = log.horaFull;
+  if (log.intervalHoras > 0)  cfg.intervalHoras    = log.intervalHoras;
+  if (log.janelaFullInicio)   cfg.janelaFullInicio = log.janelaFullInicio;
+  if (log.janelaFullFim)      cfg.janelaFullFim    = log.janelaFullFim;
+  if (log.diaSemanaDbcc)      cfg.diaSemanaDbcc    = log.diaSemanaDbcc;
+  if (log.horaDbcc)           cfg.horaDbcc         = log.horaDbcc;
+  if (log.diaSemanaIndices)   cfg.diaSemanaIndices = log.diaSemanaIndices;
+  if (log.horaIndices)        cfg.horaIndices      = log.horaIndices;
+  // Thresholds e retenção não são reportados no log → preencherFormAdmin usa defaults
+  return cfg;
 }
 
 function preencherFormAdmin(cfg) {
