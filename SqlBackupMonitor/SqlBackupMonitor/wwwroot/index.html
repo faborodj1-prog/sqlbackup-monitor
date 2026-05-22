@@ -280,6 +280,7 @@
   .admin-msg.ok   { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:var(--ok);   display:block; }
   .admin-msg.err  { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:var(--erro); display:block; }
   .admin-msg.info { background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.3); color:#60a5fa;     display:block; }
+  .admin-msg.warn { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); color:#fbbf24;    display:block; }
 
   /* ── CARD BODY — seções adicionais ── */
   .card-section-title { font-size:8px; color:var(--muted); font-weight:700; letter-spacing:1px;
@@ -1521,9 +1522,80 @@ function mostrarAdminMsg(txt, tipo) {
   setTimeout(() => { el.className = 'admin-msg'; el.textContent = ''; }, 5000);
 }
 
+// ── Trava de conflitos de agendamento ────────────────────────────────────────
+// Compara FULL (DiasFull + HoraFull) com DBCC (DiaSemanaDbcc + HoraDbcc)
+// e Reorganização de Índices (DiaSemanaIndices + HoraIndices).
+//
+// Retorna { criticos: string[], avisos: string[] }
+//   criticos → bloqueiam o salvamento (mesmo dia E mesma hora)
+//   avisos   → alertam mas permitem salvar (mesmo dia, horas diferentes)
+function validarConflitosConfig() {
+  const diasFull    = getDiasSelecionados();
+  const horaFull    = document.getElementById('adminHoraFull').value         || '';
+  const diaDbcc     = document.getElementById('adminDiaSemanaDbcc').value    || '';
+  const horaDbcc    = document.getElementById('adminHoraDbcc').value         || '';
+  const diaIndices  = document.getElementById('adminDiaSemanaIndices').value || '';
+  const horaIndices = document.getElementById('adminHoraIndices').value      || '';
+
+  const criticos = [];
+  const avisos   = [];
+
+  const norm         = s => s.toLowerCase().trim();
+  const diasFullNorm = diasFull.map(norm);
+  const dbccEmFull   = diaDbcc   && diasFullNorm.includes(norm(diaDbcc));
+  const indEmFull    = diaIndices && diasFullNorm.includes(norm(diaIndices));
+  const dbccEqInd    = diaDbcc   && diaIndices && norm(diaDbcc) === norm(diaIndices);
+
+  // ── FULL × DBCC ──────────────────────────────────────────────────────────
+  if (dbccEmFull) {
+    if (horaDbcc && horaDbcc === horaFull)
+      criticos.push(`DBCC agendado no mesmo dia e hora do Backup FULL: ${diaDbcc} às ${horaFull}`);
+    else
+      avisos.push(`DBCC em dia de FULL (${diaDbcc}): FULL às ${horaFull} × DBCC às ${horaDbcc} — pode impactar desempenho do backup`);
+  }
+
+  // ── FULL × Índices ───────────────────────────────────────────────────────
+  if (indEmFull) {
+    if (horaIndices && horaIndices === horaFull)
+      criticos.push(`Reorganização de Índices agendada no mesmo dia e hora do Backup FULL: ${diaIndices} às ${horaFull}`);
+    else
+      avisos.push(`Índices em dia de FULL (${diaIndices}): FULL às ${horaFull} × Índices às ${horaIndices} — pode impactar desempenho do backup`);
+  }
+
+  // ── DBCC × Índices ───────────────────────────────────────────────────────
+  if (dbccEqInd) {
+    if (horaDbcc && horaIndices && horaDbcc === horaIndices)
+      criticos.push(`DBCC e Reorganização de Índices agendados no mesmo dia e hora: ${diaDbcc} às ${horaDbcc}`);
+    else
+      avisos.push(`DBCC e Índices no mesmo dia (${diaDbcc}): ${horaDbcc} e ${horaIndices} — dois processos pesados na mesma janela`);
+  }
+
+  return { criticos, avisos };
+}
+
 async function salvarConfigAdmin() {
   if (!_adminCliente) { mostrarAdminMsg('Selecione um cliente primeiro.', 'err'); return; }
   if (!_adminBanco)   { mostrarAdminMsg('Selecione um banco primeiro.', 'err');   return; }
+
+  // ── Validação de conflitos de agendamento ─────────────────────────────────
+  const conflitos = validarConflitosConfig();
+  if (conflitos.criticos.length > 0) {
+    const el = document.getElementById('adminMsg');
+    el.innerHTML = '🚫 <strong>Conflito crítico — corrija antes de salvar:</strong><br>'
+      + conflitos.criticos.map(c => '• ' + c).join('<br>')
+      + (conflitos.avisos.length
+          ? '<br><small style="opacity:.8">⚠ ' + conflitos.avisos.join(' | ') + '</small>'
+          : '');
+    el.className = 'admin-msg err';
+    return;                                           // bloqueia o salvamento
+  }
+  if (conflitos.avisos.length > 0) {
+    const el = document.getElementById('adminMsg');
+    el.innerHTML = '⚠️ <strong>Atenção:</strong><br>' + conflitos.avisos.map(a => '• ' + a).join('<br>');
+    el.className = 'admin-msg warn';
+    // aviso: não bloqueia — prossegue com o salvamento
+  }
+
   const cnpjNorm = _adminCliente.cnpjNorm || '';
   try {
     const resp = await fetch(`/api/config/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(_adminBanco)}`, {
