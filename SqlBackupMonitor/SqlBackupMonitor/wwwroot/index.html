@@ -298,6 +298,13 @@
   .card-sched { display:grid; grid-template-columns:auto 1fr; gap:2px 8px; font-size:9px; }
   .card-sched-key { color:var(--muted); white-space:nowrap; }
   .card-sched-val { color:var(--text); font-weight:600; }
+  /* Sub-linhas de manutenção (DBCC / Índices) */
+  .maint-sub  { font-size:9px; font-weight:400; margin-top:2px; line-height:1.5; }
+  .maint-ok   { color:var(--ok); }
+  .maint-err  { color:var(--erro); }
+  .maint-warn { color:var(--alerta); }
+  .maint-none { color:var(--muted); font-style:italic; }
+  .maint-next { color:var(--muted); }
   .card-disk { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
   .card-disk-bar-label { display:flex; justify-content:space-between; font-size:9px;
     color:var(--muted); margin-bottom:4px; }
@@ -724,6 +731,12 @@ const fmt = {
       'MudancaParaSimple'  : '⚙ →Simple',
       'MudancaParaFull'    : '⚙ →Full',
       'FalhaFullPreSimple' : '❌ Falha PreSimple',
+      'DbccOk'             : '🔍 DBCC OK',
+      'CorrupcaoDetectada' : '☠ DBCC Corrupção',
+      'IndicesOk'          : '🔧 Índices OK',
+      'RebuildAdiado'      : '🔧⚠ Rebuild Adiado',
+      'DiscoInsuficiente'  : '💾❌ Disco Insuficiente',
+      'DiscoAlerta'        : '💾⚠ Disco Baixo',
     };
     return m[t] ?? (t || '—');
   },
@@ -927,6 +940,32 @@ function carregarResumo() {
   aplicarFiltroCliente();
 }
 
+// ── Helpers de manutenção (DBCC / Índices) ──────────────────────────────────
+
+// Retorna o registro mais recente de um banco com um dos TipoOperacao listados
+function ultimoEventoMaint(banco, tipos) {
+  return todosHistorico
+    .filter(r => { const n = nr(r); return n._banco === banco && tipos.includes(n._op); })
+    .sort((a, b) => new Date(b.dataExecucao ?? b.DataExecucao ?? 0) - new Date(a.dataExecucao ?? a.DataExecucao ?? 0))
+    [0] || null;
+}
+
+// Calcula a próxima ocorrência de um dia+hora da semana
+// diaSemana: "Sábado" | "Domingo" | "Segunda" … hora: "23:00"
+function calcProximoEvento(diaSemana, hora) {
+  const dias = { Domingo:0, Segunda:1, 'Terça':2, Quarta:3, Quinta:4, Sexta:5, 'Sábado':6 };
+  const diaAlvo = dias[diaSemana];
+  if (diaAlvo === undefined || !hora) return null;
+  const [h, m] = hora.split(':').map(Number);
+  const agora = new Date();
+  const candidato = new Date(agora);
+  candidato.setHours(h, m, 0, 0);
+  const diasAteAlvo = (diaAlvo - agora.getDay() + 7) % 7;
+  candidato.setDate(candidato.getDate() + diasAteAlvo);
+  if (candidato <= agora) candidato.setDate(candidato.getDate() + 7);
+  return candidato;
+}
+
 function renderCards(rows) {
   const el = document.getElementById('cardsContainer');
   if (!rows.length) { el.innerHTML='<div class="loader">Nenhum evento registrado ainda.</div>'; return; }
@@ -1027,14 +1066,43 @@ function renderCards(rows) {
         const fullInfo  = (n._diasFull ? n._diasFull : '—') + (n._horaFull ? ' às ' + n._horaFull : '');
         const incInfo   = n._horas ? `a cada ${n._horas}h` : '—';
         const janelaInfo = (n._janInicio && n._janFim) ? `${n._janInicio} → ${n._janFim}` : '';
-        const dbccInfo  = n._dbccDia  ? `${n._dbccDia} às ${n._dbccHora||'—'}`  : '';
-        const idxInfo   = n._idxDia   ? `${n._idxDia} às ${n._idxHora||'—'}`   : '';
-        let rows = `<div class="card-sched-key">FULL</div><div class="card-sched-val">${fullInfo}</div>`;
-        rows += `<div class="card-sched-key">Incremental</div><div class="card-sched-val">${incInfo}</div>`;
-        if (janelaInfo) rows += `<div class="card-sched-key">Janela</div><div class="card-sched-val">${janelaInfo}</div>`;
-        if (dbccInfo)   rows += `<div class="card-sched-key">DBCC</div><div class="card-sched-val">${dbccInfo}</div>`;
-        if (idxInfo)    rows += `<div class="card-sched-key">Índices</div><div class="card-sched-val">${idxInfo}</div>`;
-        return `<div class="card-section-title">Agendamento</div><div class="card-sched">${rows}</div>`;
+        let schedRows = `<div class="card-sched-key">FULL</div><div class="card-sched-val">${fullInfo}</div>`;
+        schedRows += `<div class="card-sched-key">Incremental</div><div class="card-sched-val">${incInfo}</div>`;
+        if (janelaInfo) schedRows += `<div class="card-sched-key">Janela</div><div class="card-sched-val">${janelaInfo}</div>`;
+
+        // DBCC: exibe agenda + último evento + próximo evento
+        if (n._dbccDia) {
+          const uD   = ultimoEventoMaint(n._banco, ['DbccOk','CorrupcaoDetectada']);
+          const proxD = calcProximoEvento(n._dbccDia, n._dbccHora);
+          const uDn   = uD ? nr(uD) : null;
+          let sub = '';
+          if (uDn) {
+            const ok = uDn._op === 'DbccOk';
+            sub += `<div class="maint-sub ${ok?'maint-ok':'maint-err'}">${ok?'✓ OK':'✗ Corrupção'} — ${fmt.tsm(uDn._dt)}</div>`;
+          } else {
+            sub += `<div class="maint-sub maint-none">sem registro ainda</div>`;
+          }
+          if (proxD) sub += `<div class="maint-sub maint-next">→ Próximo: ${fmt.tsm(proxD)}</div>`;
+          schedRows += `<div class="card-sched-key">DBCC</div><div class="card-sched-val">${n._dbccDia} às ${n._dbccHora||'—'}${sub}</div>`;
+        }
+
+        // Índices: exibe agenda + último evento + próximo evento
+        if (n._idxDia) {
+          const uI   = ultimoEventoMaint(n._banco, ['IndicesOk','RebuildAdiado']);
+          const proxI = calcProximoEvento(n._idxDia, n._idxHora);
+          const uIn   = uI ? nr(uI) : null;
+          let sub = '';
+          if (uIn) {
+            const ok = uIn._op === 'IndicesOk';
+            sub += `<div class="maint-sub ${ok?'maint-ok':'maint-warn'}">${ok?'✓ OK':'⚠ Rebuild Adiado'} — ${fmt.tsm(uIn._dt)}</div>`;
+          } else {
+            sub += `<div class="maint-sub maint-none">sem registro ainda</div>`;
+          }
+          if (proxI) sub += `<div class="maint-sub maint-next">→ Próximo: ${fmt.tsm(proxI)}</div>`;
+          schedRows += `<div class="card-sched-key">Índices</div><div class="card-sched-val">${n._idxDia} às ${n._idxHora||'—'}${sub}</div>`;
+        }
+
+        return `<div class="card-section-title">Agendamento</div><div class="card-sched">${schedRows}</div>`;
       })()}
       ${(() => {
         // ── Seção Disco ────────────────────────────────────────────
