@@ -145,6 +145,18 @@
   tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
   tbody tr:hover { background:rgba(59,130,246,.05); }
   tbody tr:last-child { border-bottom:none; }
+  tr.hist-row.expanded { background:rgba(59,130,246,.07); }
+  .exp-arrow { display:inline-block; width:13px; transition:transform .15s ease; color:var(--muted); }
+  tr.hist-row.expanded .exp-arrow { transform:rotate(90deg); color:var(--text); }
+  tr.hist-detail { cursor:default; background:rgba(255,255,255,.015); }
+  tr.hist-detail:hover { background:rgba(255,255,255,.015); }
+  tr.hist-detail td { padding:16px 24px; border-bottom:1px solid var(--border); }
+  .hist-detail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px 26px; }
+  .hist-detail-grid .full { grid-column:1/-1; }
+  .hist-detail-grid label { display:block; font-family:var(--ui); font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .hist-detail-grid .val { font-size:12px; color:var(--text); word-break:break-word; line-height:1.5; }
+  .hist-detail-drives { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+  .cli-link:hover { text-decoration:underline; }
   td { padding:8px 14px; font-size:12px; vertical-align:middle; }
   td.muted { color:var(--muted); font-size:11px; }
 
@@ -1250,11 +1262,14 @@ async function carregarHistorico() {
   }
 }
 
+let historicoRowsAtuais = [];
+
 function renderHistorico(rows) {
   const tbody = document.getElementById('tabelaHistorico');
+  historicoRowsAtuais = rows;
   if (!rows.length) { tbody.innerHTML=`<tr><td colspan="11" class="loader">Nenhum evento encontrado.</td></tr>`; return; }
   const tolerancia = Number(document.getElementById('cfgTolerancia')?.value || 30);
-  tbody.innerHTML = rows.map(r => {
+  tbody.innerHTML = rows.map((r, idx) => {
     const n    = nr(r);
     const isEx = (r.edicao||r.Edicao||'').toLowerCase().includes('express');
     const pct  = Number(r.percentualExpress||r.PercentualExpress||0);
@@ -1266,10 +1281,10 @@ function renderHistorico(rows) {
       const atrasado = new Date() > new Date(new Date(n._prox).getTime() + tolerancia * 60000);
       proxHtml = fmt.tsm(n._prox) + (atrasado ? ' <span style="color:#f97316;font-weight:700">⚠</span>' : '');
     }
-    return `<tr onclick="abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})">
-      <td class="muted">${fmt.ts(n._dt)}</td>
+    return `<tr class="hist-row" data-idx="${idx}" onclick="toggleDetalheHistorico(this, event)" title="Clique para ver detalhes deste evento">
+      <td class="muted"><span class="exp-arrow">▸</span> ${fmt.ts(n._dt)}</td>
       <td>${fmt.badge(n._estado)}</td>
-      <td><strong>${n._nome}</strong></td>
+      <td><strong class="cli-link" onclick="event.stopPropagation();abrirCliente(${JSON.stringify(n._nome)},${JSON.stringify(n._key)})" title="Ver histórico completo do cliente">${n._nome}</strong></td>
       <td class="muted">${n._banco}</td>
       <td>${fmt.badgeEst(n._est)}</td>
       <td style="font-size:11px;white-space:nowrap">${fmt.tipoOpIcon(n._op)}</td>
@@ -1280,6 +1295,88 @@ function renderHistorico(rows) {
       <td class="muted" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${n._msg}">${n._msg}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Linha expansível do histórico ──────────────────────────────────────
+// Clique na linha alterna um painel de detalhes logo abaixo, com as
+// informações completas daquele evento específico: arquivo gerado,
+// ciclo, mensagem completa (DBCC/Índices/etc.), agendamento e discos.
+// O clique no nome do cliente continua abrindo o modal (stopPropagation
+// evita que os dois comportamentos entrem em conflito).
+function toggleDetalheHistorico(tr, event) {
+  if (event && event.target.closest('.cli-link')) return;
+
+  const idx = Number(tr.dataset.idx);
+  const r = historicoRowsAtuais[idx];
+  if (!r) return;
+
+  const aberto = tr.nextElementSibling && tr.nextElementSibling.classList.contains('hist-detail');
+
+  // Mantém só um painel expandido por vez
+  document.querySelectorAll('#tabelaHistorico tr.hist-detail').forEach(d => d.remove());
+  document.querySelectorAll('#tabelaHistorico tr.hist-row.expanded').forEach(x => x.classList.remove('expanded'));
+
+  if (aberto) return; // já estava aberto → apenas fecha (comportamento de toggle)
+
+  tr.classList.add('expanded');
+  tr.insertAdjacentHTML('afterend', renderDetalheHistorico(r));
+}
+
+function renderDetalheHistorico(r) {
+  const n = nr(r);
+  const val = (v, suf='') => (v === null || v === undefined || v === '' ? '—' : `${v}${suf}`);
+
+  const arquivo  = r.nomeArquivo  ?? r.NomeArquivo  ?? '';
+  const ciclo    = r.ciclo        ?? r.Ciclo        ?? '';
+  const servidor = r.servidor     ?? r.Servidor     ?? '';
+  const edicao   = r.edicao       ?? r.Edicao       ?? '';
+  const versao   = r.versao       ?? r.Versao       ?? '';
+  const recovery = r.recovery     ?? r.Recovery     ?? '';
+  const statusLim= r.statusLimite ?? r.StatusLimite ?? '';
+  const pctExpr  = r.percentualExpress ?? r.PercentualExpress;
+  const msgFull  = r.status ?? r.Status ?? n._msg ?? '—';
+
+  const freqLabel = n._horas != null
+    ? `a cada ${n._horas < 1 ? Math.round(n._horas*60)+'min' : n._horas+'h'}`
+    : '—';
+
+  const drivesHtml = (n._drives && n._drives.length)
+    ? n._drives.map(d => {
+        const livre = Number(d.livre), total = Number(d.total);
+        const usadoPct = total > 0 ? (100 - (livre/total*100)) : 0;
+        const cor = usadoPct >= 90 ? 'var(--erro)' : usadoPct >= 80 ? '#f97316' : 'var(--ok)';
+        return `<span class="chip" style="border-color:${cor}">💽 <b>${d.l}</b> — ${livre.toFixed(1)} GB livres / ${total.toFixed(1)} GB <span style="color:${cor}">(${usadoPct.toFixed(0)}% usado)</span></span>`;
+      }).join('')
+    : (n._livreGB != null
+        ? `<span class="chip">💽 ${n._livreGB.toFixed(1)} GB livres / ${(n._totalGB ?? 0).toFixed(1)} GB</span>`
+        : '');
+
+  return `<tr class="hist-detail">
+    <td colspan="11">
+      <div class="hist-detail-grid">
+        <div class="full">
+          <label>📄 Mensagem / resultado completo (${fmt.tipoOpIcon(n._op)})</label>
+          <div class="val">${msgFull}</div>
+        </div>
+        <div><label>Arquivo gerado (local)</label><div class="val">${val(arquivo)}</div></div>
+        <div><label>Ciclo</label><div class="val">${val(ciclo)}</div></div>
+        <div><label>Servidor</label><div class="val">${val(servidor)}</div></div>
+        <div><label>Edição / Versão</label><div class="val">${val(edicao)}${versao ? ' — '+versao : ''}</div></div>
+        <div><label>Recovery Model</label><div class="val">${val(recovery)}</div></div>
+        <div><label>Status / Limite</label><div class="val">${val(statusLim)}</div></div>
+        ${pctExpr != null ? `<div><label>% Utilizado (Express)</label><div class="val">${Number(pctExpr).toFixed(1)}%</div></div>` : ''}
+        <div><label>Estratégia</label><div class="val">${fmt.badgeEst(n._est)}</div></div>
+        <div><label>Frequência incremental</label><div class="val">${freqLabel}</div></div>
+        <div><label>Próxima execução</label><div class="val">${n._prox ? fmt.tsm(n._prox) : '—'}</div></div>
+        <div><label>Agenda — FULL</label><div class="val">${val(n._diasFull)} às ${val(n._horaFull)}</div></div>
+        <div><label>Agenda — Incremental</label><div class="val">${n._diasInc ? n._diasInc : 'todos os dias'}</div></div>
+        <div><label>Janela segura p/ FULL</label><div class="val">${val(n._janInicio)} – ${val(n._janFim)}</div></div>
+        <div><label>Agenda — DBCC</label><div class="val">${val(n._dbccDia)} às ${val(n._dbccHora)}</div></div>
+        <div><label>Agenda — Reorg. Índices</label><div class="val">${val(n._idxDia)} às ${val(n._idxHora)}</div></div>
+      </div>
+      ${drivesHtml ? `<div class="hist-detail-drives">${drivesHtml}</div>` : ''}
+    </td>
+  </tr>`;
 }
 
 function abrirCliente(nome, doc) {
