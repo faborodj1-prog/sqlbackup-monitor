@@ -335,11 +335,11 @@
       </div>
       <div class="fg">
         <label>De</label>
-        <input type="date" id="fDe" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+        <input type="date" id="fDe" onchange="limparPeriodoBtns();carregarHistorico()"/>
       </div>
       <div class="fg">
         <label>Até</label>
-        <input type="date" id="fAte" onchange="limparPeriodoBtns();aplicarFiltroCliente()"/>
+        <input type="date" id="fAte" onchange="limparPeriodoBtns();carregarHistorico()"/>
       </div>
       <div class="period-btns">
         <button id="btnHoje"   onclick="setPeriodo('hoje')">Hoje</button>
@@ -873,7 +873,7 @@ function setPeriodo(p) {
   document.getElementById('fAte').value = ate;
   document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active'));
   document.getElementById(p==='hoje'?'btnHoje':p==='mes'?'btnMes':'btnMesAnt').classList.add('active');
-  aplicarFiltroCliente();
+  carregarHistorico();
 }
 
 function limparPeriodoBtns() { document.querySelectorAll('.period-btns button').forEach(b => b.classList.remove('active')); }
@@ -1215,9 +1215,20 @@ async function carregarGrafico() {
 
 async function carregarHistorico() {
   const tipo       = document.getElementById('filtroTipo').value;
-  const limit      = document.getElementById('filtroLimit').value;
   const estrategia = document.getElementById('filtroEstrategia').value;
   const banco      = cardSelecionado ? '' : document.getElementById('filtroBanco').value;
+  const de         = document.getElementById('fDe')?.value;
+  const ate        = document.getElementById('fAte')?.value;
+
+  // Quando há um período selecionado, a busca deve trazer TODO o intervalo —
+  // não apenas os N registros mais recentes (o que fazia dias antigos "sumirem"
+  // do histórico, mesmo com o filtro de data preenchido). O servidor já filtra
+  // por "de"/"ate" diretamente no banco (WHERE DataExecucao BETWEEN ...), então
+  // delegamos a filtragem de data a ele e só usamos o seletor de quantidade
+  // (#filtroLimit) quando NENHUM período está ativo.
+  const limitSelecionado = document.getElementById('filtroLimit').value;
+  const limit = (de || ate) ? 1000 : limitSelecionado;
+
   document.getElementById('tabelaHistorico').innerHTML=
     `<tr><td colspan="11" class="loader"><div class="spin"></div> Carregando...</td></tr>`;
   try {
@@ -1225,6 +1236,8 @@ async function carregarHistorico() {
     if (tipo)       url += `&tipo=${encodeURIComponent(tipo)}`;
     if (banco)      url += `&banco=${encodeURIComponent(banco)}`;
     if (estrategia) url += `&estrategia=${encodeURIComponent(estrategia)}`;
+    if (de)         url += `&de=${encodeURIComponent(de)}`;
+    if (ate)        url += `&ate=${encodeURIComponent(ate)}`;
     const resp = await fetch(url);
     const data = await resp.json();
     todosHistorico = Array.isArray(data) ? data : (data.historico ?? data.data ?? data.registros ?? data.items ?? []);
