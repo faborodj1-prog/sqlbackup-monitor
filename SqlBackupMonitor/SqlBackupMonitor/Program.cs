@@ -120,6 +120,21 @@ await using (var conn = new NpgsqlConnection(connStr))
         );
         CREATE INDEX IF NOT EXISTS idx_bc_cnpj ON ""BackupConfigs""(""ClienteCNPJ"");
     ");
+
+    // ── Tabela de configuração de app por cliente+banco ──────────────────────
+    // Armazena enderecoBackup e qtdDiasApagarBkp lidos de TOTAL_CONFIG
+    await conn.ExecuteAsync(@"
+        CREATE TABLE IF NOT EXISTS ""AppConfigs"" (
+            ""ClienteCNPJ""      TEXT NOT NULL DEFAULT '',
+            ""ClienteNome""      TEXT NOT NULL DEFAULT '',
+            ""BancoNome""        TEXT NOT NULL,
+            ""EnderecoBackup""   TEXT NOT NULL DEFAULT '',
+            ""QtdDiasApagarBkp"" INTEGER NOT NULL DEFAULT 30,
+            ""UpdatedAt""        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (""ClienteCNPJ"", ""BancoNome"")
+        );
+        CREATE INDEX IF NOT EXISTS idx_ac_cnpj ON ""AppConfigs""(""ClienteCNPJ"");
+    ");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -541,6 +556,85 @@ app.MapDelete("/api/config/{cnpjNorm}/{banco}", async (string cnpjNorm, string b
     return affected > 0
         ? Results.Ok(new { message = "Config removida." })
         : Results.NotFound(new { message = "Config não encontrada." });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/appconfig/{cnpjNorm}/{banco}
+// Retorna { enderecoBackup, qtdDiasApagarBkp, updatedAt } ou 404.
+// Autenticação aceita X-Api-Key (motor) ou sem auth (dashboard).
+// ════════════════════════════════════════════════════════════════════════════
+app.MapGet("/api/appconfig/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco, HttpContext ctx) =>
+{
+    if (ctx.Request.Headers.TryGetValue("X-Api-Key", out var key) && key != apiKey)
+        return Results.Unauthorized();
+
+    await using var conn = new NpgsqlConnection(connStr);
+    var row = await conn.QueryFirstOrDefaultAsync(
+        @"SELECT ""EnderecoBackup"", ""QtdDiasApagarBkp"", ""UpdatedAt""
+          FROM ""AppConfigs""
+          WHERE ""ClienteCNPJ"" = @cnpjNorm AND ""BancoNome"" = @banco",
+        new { cnpjNorm, banco });
+
+    if (row == null) return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        enderecoBackup    = (string)row.EnderecoBackup,
+        qtdDiasApagarBkp  = (int)row.QtdDiasApagarBkp,
+        updatedAt         = (DateTime)row.UpdatedAt
+    });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// PUT /api/appconfig/{cnpjNorm}/{banco}
+// Salva ou atualiza enderecoBackup e qtdDiasApagarBkp.
+// Usado pelo motor (semeadura inicial) e pelo dashboard admin.
+// ════════════════════════════════════════════════════════════════════════════
+app.MapPut("/api/appconfig/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco, HttpContext ctx) =>
+{
+    using var sr = new System.IO.StreamReader(ctx.Request.Body);
+    var body     = await sr.ReadToEndAsync();
+    if (string.IsNullOrWhiteSpace(body)) return Results.BadRequest("Payload vazio.");
+
+    string clienteNome    = "";
+    string enderecoBackup = "";
+    int    qtdDias        = 30;
+    try
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(body);
+        var root      = doc.RootElement;
+        if (root.TryGetProperty("clienteNome",      out var cn)) clienteNome    = cn.GetString() ?? "";
+        if (root.TryGetProperty("enderecoBackup",   out var eb)) enderecoBackup = eb.GetString() ?? "";
+        if (root.TryGetProperty("qtdDiasApagarBkp", out var qd)) qtdDias        = qd.GetInt32();
+    }
+    catch { return Results.BadRequest("JSON inválido."); }
+
+    await using var conn = new NpgsqlConnection(connStr);
+    await conn.ExecuteAsync(@"
+        INSERT INTO ""AppConfigs"" (""ClienteCNPJ"", ""ClienteNome"", ""BancoNome"", ""EnderecoBackup"", ""QtdDiasApagarBkp"", ""UpdatedAt"")
+        VALUES (@cnpjNorm, @clienteNome, @banco, @enderecoBackup, @qtdDias, NOW())
+        ON CONFLICT (""ClienteCNPJ"", ""BancoNome"") DO UPDATE
+            SET ""EnderecoBackup""   = EXCLUDED.""EnderecoBackup"",
+                ""QtdDiasApagarBkp"" = EXCLUDED.""QtdDiasApagarBkp"",
+                ""ClienteNome""      = CASE WHEN EXCLUDED.""ClienteNome"" <> '' THEN EXCLUDED.""ClienteNome"" ELSE ""AppConfigs"".""ClienteNome"" END,
+                ""UpdatedAt""        = NOW()",
+        new { cnpjNorm, clienteNome, banco, enderecoBackup, qtdDias });
+
+    return Results.Ok(new { message = $"App Config de '{banco}' salva." });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DELETE /api/appconfig/{cnpjNorm}/{banco} — remove app config
+// ════════════════════════════════════════════════════════════════════════════
+app.MapDelete("/api/appconfig/{cnpjNorm}/{banco}", async (string cnpjNorm, string banco) =>
+{
+    await using var conn = new NpgsqlConnection(connStr);
+    var affected = await conn.ExecuteAsync(
+        @"DELETE FROM ""AppConfigs"" WHERE ""ClienteCNPJ"" = @cnpjNorm AND ""BancoNome"" = @banco",
+        new { cnpjNorm, banco });
+    return affected > 0
+        ? Results.Ok(new { message = "App Config removida." })
+        : Results.NotFound(new { message = "App Config não encontrada." });
 });
 
 // Fallback → index.html (SPA)

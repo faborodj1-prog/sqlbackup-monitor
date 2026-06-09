@@ -562,6 +562,7 @@
             <button class="admin-tab-btn"        onclick="showAdminTab('manutencao',this)">🔧 Manutenção</button>
             <button class="admin-tab-btn"        onclick="showAdminTab('thresholds',this)">📊 Thresholds</button>
             <button class="admin-tab-btn"        onclick="showAdminTab('retencao',this)">🗄 Retenção</button>
+            <button class="admin-tab-btn"        onclick="showAdminTab('appconfig',this)">🏢 App Config</button>
           </div>
 
           <!-- ABA: Agendamento -->
@@ -694,6 +695,33 @@
               Dados de conexão (senha, token Telegram, API key) permanecem
               <b>apenas no appsettings.json local</b> do servidor — nunca enviados ao monitor.
             </p>
+          </div>
+
+          <!-- ABA: App Config -->
+          <div id="adminTab-appconfig" class="admin-tab-content">
+            <div class="admin-grid">
+              <div class="admin-field" style="grid-column:1/-1">
+                <label>Endereço de Backup <code style="font-size:10px;opacity:.7">(enderecoBackup)</code></label>
+                <input type="text" id="adminEnderecoBackup" placeholder="ex: C:\Infototal\Backup"/>
+                <span class="hint">Caminho onde o sistema salva os backups. Será criado automaticamente se não existir.</span>
+              </div>
+              <div class="admin-field">
+                <label>Dias para apagar backups <code style="font-size:10px;opacity:.7">(qtdDiasApagarBkp)</code></label>
+                <input type="number" id="adminQtdDiasApagarBkp" min="0" value="30"/>
+                <span class="hint">Backups com mais de N dias são removidos pelo sistema cliente</span>
+              </div>
+            </div>
+            <div class="admin-sep"></div>
+            <p style="font-size:11px;color:var(--muted);line-height:1.6">
+              ℹ️ Dados lidos de <b>TOTAL_CONFIG</b> no banco da aplicação do cliente.<br>
+              Alterações salvas aqui serão aplicadas via <code>UPDATE TOTAL_CONFIG</code> na <b>próxima execução do motor</b>.<br>
+              Na primeira execução, o motor semeia automaticamente os valores locais neste painel.
+            </p>
+            <div class="admin-actions" style="margin-top:12px">
+              <button class="btn-save" onclick="salvarAppConfig()">💾 Salvar App Config</button>
+              <button class="btn-del"  onclick="removerAppConfig()">🗑 Remover App Config</button>
+            </div>
+            <div id="adminAppMsg" class="admin-msg" style="margin-top:8px"></div>
           </div>
 
           <!-- Ações -->
@@ -1624,6 +1652,8 @@ async function carregarConfigAdmin(banco) {
   const badge = document.getElementById('adminStatusBadge');
   const msg   = document.getElementById('adminMsg');
   msg.className = 'admin-msg'; msg.textContent = '';
+  // Carrega App Config (TOTAL_CONFIG) em paralelo
+  carregarAppConfig(banco);
   if (!banco || !_adminCliente) {
     badge.textContent = 'Sem config remota'; badge.className = 'admin-status local';
     return;
@@ -1840,6 +1870,74 @@ async function limparConfigAdmin() {
     mostrarAdminMsg('🗑 Config removida. Motor voltará a usar appsettings.json.', 'ok');
     await carregarClientesAdmin();
   } catch(e) { mostrarAdminMsg('Erro: ' + e.message, 'err'); }
+}
+
+// ── App Config (TOTAL_CONFIG) ────────────────────────────────────────────────
+async function carregarAppConfig(banco) {
+  const elEnd  = document.getElementById('adminEnderecoBackup');
+  const elDias = document.getElementById('adminQtdDiasApagarBkp');
+  const elMsg  = document.getElementById('adminAppMsg');
+  if (elEnd)  elEnd.value  = '';
+  if (elDias) elDias.value = 30;
+  if (elMsg)  { elMsg.className = 'admin-msg'; elMsg.textContent = ''; }
+  if (!banco || !_adminCliente) return;
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
+  try {
+    const resp = await fetch(`/api/appconfig/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(banco)}`);
+    if (resp.status === 404) return; // sem config — campos em branco/default
+    if (!resp.ok) return;
+    const cfg = await resp.json();
+    if (elEnd)  elEnd.value  = cfg.enderecoBackup    ?? '';
+    if (elDias) elDias.value = cfg.qtdDiasApagarBkp  ?? 30;
+  } catch(e) { /* falha silenciosa */ }
+}
+
+async function salvarAppConfig() {
+  if (!_adminCliente) { mostrarAppMsg('Selecione um cliente primeiro.', 'err'); return; }
+  if (!_adminBanco)   { mostrarAppMsg('Selecione um banco primeiro.', 'err');   return; }
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
+  const end  = (document.getElementById('adminEnderecoBackup').value  || '').trim();
+  const dias = parseInt(document.getElementById('adminQtdDiasApagarBkp').value) || 0;
+  if (!end) { mostrarAppMsg('Informe o endereço de backup.', 'err'); return; }
+  try {
+    const resp = await fetch(
+      `/api/appconfig/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(_adminBanco)}`,
+      {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ clienteNome: _adminCliente.nome ?? '', enderecoBackup: end, qtdDiasApagarBkp: dias })
+      }
+    );
+    if (!resp.ok) { mostrarAppMsg('Erro ao salvar: HTTP ' + resp.status, 'err'); return; }
+    mostrarAppMsg('✅ App Config salva! Será aplicada na próxima execução do motor.', 'ok');
+  } catch(e) { mostrarAppMsg('Erro: ' + e.message, 'err'); }
+}
+
+async function removerAppConfig() {
+  if (!_adminCliente) { mostrarAppMsg('Selecione um cliente primeiro.', 'err'); return; }
+  if (!_adminBanco)   { mostrarAppMsg('Selecione um banco primeiro.', 'err');   return; }
+  if (!confirm(`Remover App Config do banco "${_adminBanco}"?\nO motor deixará de sincronizar TOTAL_CONFIG com o monitor.`)) return;
+  const cnpjNorm = _adminCliente.cnpjNorm || '';
+  try {
+    const resp = await fetch(
+      `/api/appconfig/${encodeURIComponent(cnpjNorm)}/${encodeURIComponent(_adminBanco)}`,
+      { method: 'DELETE' }
+    );
+    if (!resp.ok && resp.status !== 404) { mostrarAppMsg('Erro: HTTP ' + resp.status, 'err'); return; }
+    const elEnd  = document.getElementById('adminEnderecoBackup');
+    const elDias = document.getElementById('adminQtdDiasApagarBkp');
+    if (elEnd)  elEnd.value  = '';
+    if (elDias) elDias.value = 30;
+    mostrarAppMsg('🗑 App Config removida. Motor não sincronizará mais o TOTAL_CONFIG.', 'ok');
+  } catch(e) { mostrarAppMsg('Erro: ' + e.message, 'err'); }
+}
+
+function mostrarAppMsg(txt, tipo) {
+  const el = document.getElementById('adminAppMsg');
+  if (!el) return;
+  el.textContent = txt;
+  el.className   = 'admin-msg ' + tipo;
+  setTimeout(() => { el.className = 'admin-msg'; el.textContent = ''; }, 5000);
 }
 </script>
 </body>
