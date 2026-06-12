@@ -9,17 +9,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg:      #0a0c10;
-    --surface: #111318;
-    --border:  #1e2128;
-    --border2: #2a2f3a;
-    --text:    #e2e6f0;
-    --muted:   #6b7280;
-    --ok:      #22c55e;
-    --erro:    #ef4444;
-    --alerta:  #f59e0b;
-    --accent:  #3b82f6;
-    --accent2: #6366f1;
+    --bg:      #1a1d25;
+    --surface: #222835;
+    --border:  #2d3142;
+    --border2: #3a4052;
+    --text:    #e8ecf5;
+    --muted:   #8b95a8;
+    --ok:      #10b981;
+    --erro:    #f87171;
+    --alerta:  #fbbf24;
+    --accent:  #60a5fa;
+    --accent2: #818cf8;
     --mono:    'JetBrains Mono', monospace;
     --ui:      'Syne', sans-serif;
   }
@@ -43,7 +43,7 @@
   body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
   html[data-theme="light"] body::before { background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.03) 2px,rgba(255,255,255,.03) 4px); }
 
-  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; transition: background-color .3s ease, box-shadow .3s ease; }
+  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(26,29,37,.95); backdrop-filter:blur(8px); z-index:100; transition: background-color .3s ease, box-shadow .3s ease; }
   html[data-theme="light"] header { background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(250,251,252,.96) 100%); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
   .logo-dot { width:8px; height:8px; background:var(--ok); border-radius:50%; animation:pulse 2s infinite; }
