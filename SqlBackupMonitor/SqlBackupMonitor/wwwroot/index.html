@@ -23,18 +23,37 @@
     --mono:    'JetBrains Mono', monospace;
     --ui:      'Syne', sans-serif;
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
-  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
 
-  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; }
+  html[data-theme="light"] {
+    --bg:      #f8f9fb;
+    --surface: #ffffff;
+    --border:  #e5e7eb;
+    --border2: #d1d5db;
+    --text:    #1f2937;
+    --muted:   #6b7280;
+    --ok:      #16a34a;
+    --erro:    #dc2626;
+    --alerta:  #d97706;
+    --accent:  #2563eb;
+    --accent2: #4f46e5;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { transition: background-color .3s ease, color .3s ease; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; transition: background-color .3s ease, color .3s ease; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events:none; z-index:1000; }
+  html[data-theme="light"] body::before { background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.08) 2px,rgba(255,255,255,.08) 4px); }
+
+  header { border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; background:rgba(10,12,16,.95); backdrop-filter:blur(8px); z-index:100; transition: background-color .3s ease; }
+  html[data-theme="light"] header { background:rgba(248,249,251,.95); }
   .logo { font-family:var(--ui); font-weight:800; font-size:16px; letter-spacing:-.5px; display:flex; align-items:center; gap:10px; }
   .logo-dot { width:8px; height:8px; background:var(--ok); border-radius:50%; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
   .header-right { display:flex; align-items:center; gap:16px; }
   .last-update { color:var(--muted); font-size:11px; }
-  .btn-refresh { background:var(--surface); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer; border-radius:4px; transition:border-color .2s; }
+  .btn-refresh { background:var(--surface); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 12px; cursor:pointer; border-radius:4px; transition:border-color .2s, background-color .3s; }
   .btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-theme { background:var(--surface); border:1px solid var(--border2); color:var(--text); width:32px; height:32px; cursor:pointer; border-radius:4px; display:flex; align-items:center; justify-content:center; transition:all .3s; font-size:14px; }
+  .btn-theme:hover { border-color:var(--accent); color:var(--accent); }
 
   main { max-width:1400px; margin:0 auto; padding:28px 32px; display:flex; flex-direction:column; gap:28px; }
 
@@ -44,10 +63,11 @@
   .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
   .fg { display:flex; flex-direction:column; gap:4px; }
   .fg label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
-  .fg input[type=text], .fg input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:12px; padding:5px 10px; border-radius:4px; outline:none; height:30px; }
+  .fg input[type=text], .fg input[type=date] { background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:12px; padding:5px 10px; border-radius:4px; outline:none; height:30px; transition: border-color .2s ease; }
   .fg input:focus { border-color:var(--accent); }
   .fg input[type=text] { width:200px; }
-  .fg input[type=date] { width:140px; color-scheme:dark; }
+  .fg input[type=date] { width:140px; }
+  html[data-theme="light"] .fg input[type=date] { color-scheme:light; }
   .period-btns { display:flex; gap:6px; align-items:flex-end; }
   .period-btns button { height:30px; padding:0 12px; background:var(--bg); border:1px solid var(--border2); color:var(--muted); font-family:var(--mono); font-size:11px; border-radius:4px; cursor:pointer; transition:all .15s; }
   .period-btns button:hover { border-color:var(--accent); color:var(--accent); }
@@ -331,6 +351,7 @@
   <div class="logo"><div class="logo-dot"></div>SqlBackup Monitor</div>
   <div class="header-right">
     <span class="last-update" id="lastUpdate">—</span>
+    <button class="btn-theme" onclick="toggleTheme()" title="Alternar tema" id="themeBtn">🌙</button>
     <button class="btn-admin"   onclick="abrirLoginAdmin()" title="Configuração remota por banco">⚙ Config</button>
     <button class="btn-refresh" onclick="carregarTudo()">↺ Atualizar</button>
   </div>
@@ -738,6 +759,35 @@
 </div><!-- /adminPanelOverlay -->
 
 <script>
+// ── THEME TOGGLE ──
+function initTheme() {
+  const stored = localStorage.getItem('theme');
+  const prefered = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const theme = stored || prefered;
+  applyTheme(theme);
+}
+
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('themeBtn').textContent = '☀️';
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeBtn').textContent = '🌙';
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+}
+
+// Inicializar tema ao carregar
+document.addEventListener('DOMContentLoaded', initTheme);
+
 const fmt = {
   ts: v => {
     if (!v) return '—';
