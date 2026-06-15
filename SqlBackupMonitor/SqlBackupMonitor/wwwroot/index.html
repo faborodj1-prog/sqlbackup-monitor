@@ -675,8 +675,8 @@
               </div>
               <div class="admin-field">
                 <label>Shrink do Log — Limite (% dos dados)</label>
-                <input type="number" id="adminThresholdLogPercent" min="0" value="150"/>
-                <span class="hint">Shrink se Log > dados × (este %). 0 = desativado</span>
+                <input type="number" id="adminThresholdLogPercent" min="0" value="30"/>
+                <span class="hint">Shrink se Log > X% dos dados (ex: 30 = shrink se log > 30% dos dados). 0 = desativado</span>
               </div>
               <div class="admin-field">
                 <label>Reserva de Memória SQL Server (%)</label>
@@ -1779,7 +1779,7 @@ function preencherFormAdmin(cfg) {
   document.getElementById('adminHoraIndices').value                = v.horaIndices            ?? '02:00';
   document.getElementById('adminThresholdSimpleGB').value          = v.thresholdSimpleGB       ?? 30;
   document.getElementById('adminThresholdModificadoPercent').value = v.thresholdModificadoPercent ?? 60;
-  document.getElementById('adminThresholdLogPercent').value        = v.thresholdLogPercent    ?? 150;
+  document.getElementById('adminThresholdLogPercent').value        = v.thresholdLogPercent    ?? 30;
   document.getElementById('adminReservaMemoriaPercent').value      = v.reservaMemoriaPercent  ?? 50;
   document.getElementById('adminAlertaEspacoLivreGB').value        = v.alertaEspacoLivreGB   ?? 20;
   document.getElementById('adminAlertaLogsCicloGB').value          = v.alertaLogsCicloGB     ?? 10;
