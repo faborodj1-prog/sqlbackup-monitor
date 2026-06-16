@@ -900,6 +900,9 @@ function nr(r) {
     _livreGB:  r.espacoLivreGB != null ? Number(r.espacoLivreGB) : null,
     _totalGB:  r.espacoTotalGB != null ? Number(r.espacoTotalGB) : null,
     _drives:   (() => { try { return JSON.parse(r.drivesJson || '[]'); } catch { return []; } })(),
+    // ── RAM do servidor ───────────────────────────────────────────────
+    _ramDisp:  (() => { const v = r.ramDisponivelMB ?? r.RamDisponivelMB; return v != null ? Number(v) : null; })(),
+    _ramTotal: (() => { const v = r.ramTotalMB      ?? r.RamTotalMB;      return v != null ? Number(v) : null; })(),
   };
 }
 
@@ -1233,6 +1236,24 @@ function renderCards(rows) {
         return `<div class="card-disk">${driveHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── Seção RAM ──────────────────────────────────────────────
+        if (!n._ramTotal || n._ramTotal <= 0) return '';
+        const pct     = Math.min(((n._ramTotal - n._ramDisp) / n._ramTotal) * 100, 100);
+        const col     = pct >= 85 ? 'var(--erro)' : pct >= 70 ? 'var(--alerta)' : 'var(--ok)';
+        const icon    = pct >= 85 ? ' 🚨' : pct >= 70 ? ' ⚠️' : '';
+        const dispGB  = (n._ramDisp  / 1024).toFixed(1);
+        const totGB   = (n._ramTotal / 1024).toFixed(1);
+        return `<div class="card-disk" style="margin-top:4px">
+          <div>
+            <div class="card-disk-bar-label">
+              <span>🧠 RAM${icon} — ${dispGB} GB livre de ${totGB} GB</span>
+              <span style="color:${col}">${pct.toFixed(1)}% usado</span>
+            </div>
+            <div class="card-disk-track"><div class="card-disk-fill" style="width:${pct.toFixed(1)}%;background:${col}"></div></div>
+          </div>
+        </div>`;
+      })()}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
       </div><!-- /card-body -->
     </div>`;
@@ -1443,6 +1464,14 @@ function renderDetalheHistorico(r) {
         ? `<span class="chip">💽 ${n._livreGB.toFixed(1)} GB livres / ${(n._totalGB ?? 0).toFixed(1)} GB</span>`
         : '');
 
+  const ramHtml = (n._ramTotal && n._ramTotal > 0) ? (() => {
+    const pct    = Math.min(((n._ramTotal - n._ramDisp) / n._ramTotal) * 100, 100);
+    const cor    = pct >= 85 ? 'var(--erro)' : pct >= 70 ? 'var(--alerta)' : 'var(--ok)';
+    const dispGB = (n._ramDisp  / 1024).toFixed(1);
+    const totGB  = (n._ramTotal / 1024).toFixed(1);
+    return `<span class="chip" style="border-color:${cor}">🧠 RAM — ${dispGB} GB livres / ${totGB} GB <span style="color:${cor}">(${pct.toFixed(0)}% usado)</span></span>`;
+  })() : '';
+
   return `<tr class="hist-detail">
     <td colspan="11">
       <div class="hist-detail-grid">
@@ -1466,7 +1495,7 @@ function renderDetalheHistorico(r) {
         <div><label>Agenda — DBCC</label><div class="val">${val(n._dbccDia)} às ${val(n._dbccHora)}</div></div>
         <div><label>Agenda — Reorg. Índices</label><div class="val">${val(n._idxDia)} às ${val(n._idxHora)}</div></div>
       </div>
-      ${drivesHtml ? `<div class="hist-detail-drives">${drivesHtml}</div>` : ''}
+      ${(drivesHtml || ramHtml) ? `<div class="hist-detail-drives">${drivesHtml}${ramHtml}</div>` : ''}
     </td>
   </tr>`;
 }

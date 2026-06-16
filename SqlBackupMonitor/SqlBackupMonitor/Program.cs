@@ -91,7 +91,9 @@ await using (var conn = new NpgsqlConnection(connStr))
             ADD COLUMN IF NOT EXISTS ""HoraIndices""      TEXT          DEFAULT '',
             ADD COLUMN IF NOT EXISTS ""EspacoLivreGB""    NUMERIC(10,3) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS ""EspacoTotalGB""    NUMERIC(10,3) DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS ""DrivesJson""       TEXT          DEFAULT '';
+            ADD COLUMN IF NOT EXISTS ""DrivesJson""       TEXT          DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ""RamDisponivelMB""  BIGINT        DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS ""RamTotalMB""       BIGINT        DEFAULT 0;
     ");
 
     // ── Tabela de configuração remota por cliente+banco ──────────────────────
@@ -160,7 +162,8 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             ""DiaSemanaDbcc"", ""HoraDbcc"",
             ""DiaSemanaIndices"", ""HoraIndices"",
             ""EspacoLivreGB"", ""EspacoTotalGB"",
-            ""DrivesJson""
+            ""DrivesJson"",
+            ""RamDisponivelMB"", ""RamTotalMB""
         ) VALUES (
             @DataExecucao, @ClienteNome, @ClienteCNPJ,
             @BancoNome, @TipoBackup, @Status, @NomeArquivo, @Ciclo,
@@ -173,7 +176,8 @@ app.MapPost("/api/backup", async (HttpContext ctx, BackupLog log) =>
             @DiaSemanaDbcc, @HoraDbcc,
             @DiaSemanaIndices, @HoraIndices,
             @EspacoLivreGB, @EspacoTotalGB,
-            @DrivesJson
+            @DrivesJson,
+            @RamDisponivelMB, @RamTotalMB
         )", log);
 
     return Results.Ok(new { message = "Backup registrado com sucesso" });
@@ -635,6 +639,18 @@ app.MapDelete("/api/appconfig/{cnpjNorm}/{banco}", async (string cnpjNorm, strin
     return affected > 0
         ? Results.Ok(new { message = "App Config removida." })
         : Results.NotFound(new { message = "App Config não encontrada." });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/versao — versão atual disponível para auto-update dos clientes
+// Env vars: VERSAO_ATUAL (ex: "2.0.0"), UPDATE_URL (URL do ZIP de release)
+// Se VERSAO_ATUAL não estiver definida, retorna string vazia → clientes ignoram
+// ════════════════════════════════════════════════════════════════════════════
+app.MapGet("/api/versao", () =>
+{
+    var versao = Environment.GetEnvironmentVariable("VERSAO_ATUAL") ?? "";
+    var url    = Environment.GetEnvironmentVariable("UPDATE_URL")   ?? "";
+    return Results.Ok(new { versao, url });
 });
 
 // Fallback → index.html (SPA)

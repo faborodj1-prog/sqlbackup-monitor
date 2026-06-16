@@ -48,4 +48,8 @@ public class BackupLog
     // ── Todos os drives fixos do servidor ─────────────────────────────
     // JSON compacto: [{"l":"C:","livre":50.1,"total":200.0}, ...]
     public string DrivesJson { get; set; } = "";
+
+    // ── RAM do servidor (via sys.dm_os_sys_memory) ─────────────────────
+    public long RamDisponivelMB { get; set; }
+    public long RamTotalMB      { get; set; }
 }
