@@ -903,6 +903,7 @@ function nr(r) {
     // ── RAM do servidor ───────────────────────────────────────────────
     _ramDisp:  (() => { const v = r.ramDisponivelMB ?? r.RamDisponivelMB; return v != null ? Number(v) : null; })(),
     _ramTotal: (() => { const v = r.ramTotalMB      ?? r.RamTotalMB;      return v != null ? Number(v) : null; })(),
+    _sqlRam:   (() => { const v = r.sqlRamUsadaMB   ?? r.SqlRamUsadaMB;   return v != null ? Number(v) : null; })(),
   };
 }
 
@@ -1254,6 +1255,21 @@ function renderCards(rows) {
           </div>
         </div>`;
       })()}
+      ${(() => {
+        if (!n._sqlRam || n._sqlRam <= 0 || !n._ramTotal || n._ramTotal <= 0) return '';
+        const pct   = Math.min((n._sqlRam / n._ramTotal) * 100, 100);
+        const sqlGB = (n._sqlRam / 1024).toFixed(1);
+        const totGB = (n._ramTotal / 1024).toFixed(1);
+        return `<div class="card-disk" style="margin-top:2px">
+          <div>
+            <div class="card-disk-bar-label">
+              <span>🗄 SQL Server — ${sqlGB} GB em uso</span>
+              <span style="color:var(--accent)">${pct.toFixed(1)}% da RAM</span>
+            </div>
+            <div class="card-disk-track"><div class="card-disk-fill" style="width:${pct.toFixed(1)}%;background:var(--accent)"></div></div>
+          </div>
+        </div>`;
+      })()}
       <div class="card-ts">Atualizado ${fmt.ts(r.dataExecucao??r.DataExecucao)}</div>
       </div><!-- /card-body -->
     </div>`;
@@ -1472,6 +1488,13 @@ function renderDetalheHistorico(r) {
     return `<span class="chip" style="border-color:${cor}">🧠 RAM — ${dispGB} GB livres / ${totGB} GB <span style="color:${cor}">(${pct.toFixed(0)}% usado)</span></span>`;
   })() : '';
 
+  const sqlRamHtml = (n._sqlRam && n._sqlRam > 0 && n._ramTotal > 0) ? (() => {
+    const sqlGB  = (n._sqlRam  / 1024).toFixed(1);
+    const totGB  = (n._ramTotal / 1024).toFixed(1);
+    const pct    = Math.min((n._sqlRam / n._ramTotal) * 100, 100).toFixed(0);
+    return `<span class="chip" style="border-color:var(--accent)">🗄 SQL Server — ${sqlGB} GB / ${totGB} GB <span style="color:var(--accent)">(${pct}% da RAM)</span></span>`;
+  })() : '';
+
   return `<tr class="hist-detail">
     <td colspan="11">
       <div class="hist-detail-grid">
@@ -1495,7 +1518,7 @@ function renderDetalheHistorico(r) {
         <div><label>Agenda — DBCC</label><div class="val">${val(n._dbccDia)} às ${val(n._dbccHora)}</div></div>
         <div><label>Agenda — Reorg. Índices</label><div class="val">${val(n._idxDia)} às ${val(n._idxHora)}</div></div>
       </div>
-      ${(drivesHtml || ramHtml) ? `<div class="hist-detail-drives">${drivesHtml}${ramHtml}</div>` : ''}
+      ${(drivesHtml || ramHtml || sqlRamHtml) ? `<div class="hist-detail-drives">${drivesHtml}${ramHtml}${sqlRamHtml}</div>` : ''}
     </td>
   </tr>`;
 }

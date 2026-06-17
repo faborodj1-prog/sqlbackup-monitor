@@ -52,4 +52,7 @@ public class BackupLog
     // ── RAM do servidor (via sys.dm_os_sys_memory) ─────────────────────
     public long RamDisponivelMB { get; set; }
     public long RamTotalMB      { get; set; }
+
+    // ── Consumo real do SQL Server (via sys.dm_os_process_memory) ──────
+    public long SqlRamUsadaMB { get; set; }
 }
