@@ -607,6 +607,19 @@
                 </div>
                 <span class="hint">Dias da semana em que o FULL será executado</span>
               </div>
+              <div class="admin-field" style="grid-column:1/-1">
+                <label>Dias do Incremental</label>
+                <div class="admin-dias" id="adminDiasIncremental">
+                  <button class="admin-dia-btn sel" data-dia="Segunda"  onclick="toggleDia(this)">Seg</button>
+                  <button class="admin-dia-btn sel" data-dia="Terça"    onclick="toggleDia(this)">Ter</button>
+                  <button class="admin-dia-btn sel" data-dia="Quarta"   onclick="toggleDia(this)">Qua</button>
+                  <button class="admin-dia-btn sel" data-dia="Quinta"   onclick="toggleDia(this)">Qui</button>
+                  <button class="admin-dia-btn sel" data-dia="Sexta"    onclick="toggleDia(this)">Sex</button>
+                  <button class="admin-dia-btn sel" data-dia="Sábado"   onclick="toggleDia(this)">Sáb</button>
+                  <button class="admin-dia-btn sel" data-dia="Domingo"  onclick="toggleDia(this)">Dom</button>
+                </div>
+                <span class="hint">Dias em que os backups incrementais serão executados (normalmente todos os dias)</span>
+              </div>
               <div class="admin-field">
                 <label>Hora do FULL</label>
                 <input type="time" id="adminHoraFull" value="01:00"/>
@@ -1738,14 +1751,14 @@ function showAdminTab(tab, btn) {
 
 function toggleDia(btn) { btn.classList.toggle('sel'); }
 
-function setDiasSelecionados(dias) {
-  document.querySelectorAll('#adminDiasFull .admin-dia-btn').forEach(btn => {
+function setDiasSelecionados(dias, containerId = 'adminDiasFull') {
+  document.querySelectorAll(`#${containerId} .admin-dia-btn`).forEach(btn => {
     btn.classList.toggle('sel', (dias||[]).some(d => d.toLowerCase() === btn.dataset.dia.toLowerCase()));
   });
 }
 
-function getDiasSelecionados() {
-  return [...document.querySelectorAll('#adminDiasFull .admin-dia-btn.sel')].map(b => b.dataset.dia);
+function getDiasSelecionados(containerId = 'adminDiasFull') {
+  return [...document.querySelectorAll(`#${containerId} .admin-dia-btn.sel`)].map(b => b.dataset.dia);
 }
 
 function setSelectValue(id, val) {
@@ -1806,6 +1819,8 @@ function configDoUltimoLog(cnpjNorm, banco) {
   // DiasFull vem como CSV "Segunda,Quinta" no log → converter para array
   const dias = (log.diasFull || '').split(',').map(s => s.trim()).filter(Boolean);
   if (dias.length)            cfg.diasFull         = dias;
+  const diasInc = (log.diasIncremental || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (diasInc.length)         cfg.diasIncremental  = diasInc;
   if (log.horaFull)           cfg.horaFull         = log.horaFull;
   if (log.intervalHoras > 0)  cfg.intervalHoras    = log.intervalHoras;
   if (log.janelaFullInicio)   cfg.janelaFullInicio = log.janelaFullInicio;
@@ -1821,6 +1836,8 @@ function configDoUltimoLog(cnpjNorm, banco) {
 function preencherFormAdmin(cfg) {
   const v = cfg ?? {};
   setDiasSelecionados(v.diasFull ?? []);
+  const diasIncDefault = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  setDiasSelecionados(v.diasIncremental ?? diasIncDefault, 'adminDiasIncremental');
   document.getElementById('adminHoraFull').value                   = v.horaFull              ?? '01:00';
   document.getElementById('adminIntervalHoras').value              = v.intervalHoras          ?? 2;
   document.getElementById('adminJanelaInicio').value               = v.janelaFullInicio       ?? '00:30';
@@ -1845,7 +1862,7 @@ function coletarFormAdmin() {
     clienteNome:              _adminCliente?.nome ?? '',
     diasFull:                 getDiasSelecionados(),
     horaFull:                 document.getElementById('adminHoraFull').value,
-    diasIncremental:          [],
+    diasIncremental:          getDiasSelecionados('adminDiasIncremental'),
     intervalHoras:            parseInt(document.getElementById('adminIntervalHoras').value)            || 2,
     janelaFullInicio:         document.getElementById('adminJanelaInicio').value,
     janelaFullFim:            document.getElementById('adminJanelaFim').value,
